@@ -1,10 +1,36 @@
 "use client";
 
 import Link from "next/link";
+import { login } from "@/lib/supabase/auth.action";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 export const dynamic = "force-dynamic";
 
 export default function LoginPage() {
+  const { register, handleSubmit, formState } = useForm<{
+    email: string;
+    password: string;
+  }>();
+  const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
+
+  const onSubmit = async (data: { email: string; password: string }) => {
+    try {
+      const result = await login(data.email, data.password);
+      if (!result.success) {
+        toast("Wrong email or password");
+      } else {
+        router.push("/");
+        // You can redirect the user or update the UI here
+      }
+    } catch (error) {
+      console.error("Login failed:", error);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 p-6">
       <style>{`
@@ -89,34 +115,80 @@ export default function LoginPage() {
             <span className="flex-1 h-px bg-gray-300" />
           </div>
 
-          <div className="w-full mb-3">
-            <input
-              className="w-full px-4.5 py-3 border border-gray-200 rounded-lg font-poppins text-sm text-gray-700 outline-none bg-gray-50 focus:border-orange-600 focus:bg-white focus:shadow-sm focus:ring-2 focus:ring-orange-100 placeholder-gray-400 transition-all"
-              type="email"
-              placeholder="Email"
-            />
-          </div>
-          <div className="w-full mb-3">
-            <input
-              className="w-full px-4.5 py-3 border border-gray-200 rounded-lg font-poppins text-sm text-gray-700 outline-none bg-gray-50 focus:border-orange-600 focus:bg-white focus:shadow-sm focus:ring-2 focus:ring-orange-100 placeholder-gray-400 transition-all"
-              type="password"
-              placeholder="Password"
-            />
-          </div>
+          <form onSubmit={handleSubmit(onSubmit)} className="w-full">
+            <div className="w-full mb-3">
+              <input
+                {...register("email")}
+                name="email"
+                className="w-full px-4.5 py-3 border border-gray-200 rounded-lg font-poppins text-sm text-gray-700 outline-none bg-gray-50 focus:border-orange-600 focus:bg-white focus:shadow-sm focus:ring-2 focus:ring-orange-100 placeholder-gray-400 transition-all"
+                type="email"
+                placeholder="Email"
+              />
+            </div>
+            <div className="w-full mb-3 relative">
+              <input
+                {...register("password")}
+                name="password"
+                className="w-full px-4.5 py-3 pr-10 border border-gray-200 rounded-lg font-poppins text-sm text-gray-700 outline-none bg-gray-50 focus:border-orange-600 focus:bg-white focus:shadow-sm focus:ring-2 focus:ring-orange-100 placeholder-gray-400 transition-all"
+                type={showPassword ? "text" : "password"}
+                placeholder="Password"
+              />
+              <button
+                type="button"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                onClick={() => setShowPassword((s) => !s)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-orange-600"
+              >
+                {showPassword ? (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-4.97 0-9.27-3-11-8 1.04-2.64 2.8-4.8 4.94-6.06" />
+                    <path d="M1 1l22 22" />
+                    <path d="M9.88 9.88A3 3 0 0 0 14.12 14.12" />
+                  </svg>
+                )}
+              </button>
+            </div>
 
-          <Link
-            href="/forgot-password"
-            className="font-poppins text-xs text-gray-400 no-underline self-end mb-5 hover:text-orange-600 transition-colors"
-          >
-            Forgot Your Password?
-          </Link>
+            <Link
+              href="/forgot-password"
+              className="font-poppins text-xs text-gray-400 no-underline self-end mb-5 hover:text-orange-600 transition-colors"
+            >
+              Forgot Your Password?
+            </Link>
 
-          <button
-            className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-none rounded-full px-11 py-3 font-poppins font-semibold text-sm tracking-wider cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-lg"
-            style={{ boxShadow: "0 6px 22px rgba(255,96,0,.35)" }}
-          >
-            SIGN IN
-          </button>
+            <button
+              type="submit"
+              className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-none rounded-full px-11 py-3 font-poppins font-semibold text-sm tracking-wider cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-lg"
+              style={{ boxShadow: "0 6px 22px rgba(255,96,0,.35)" }}
+            >
+              SIGN IN
+            </button>
+          </form>
         </div>
 
         {/* ── RIGHT: Orange panel ── */}

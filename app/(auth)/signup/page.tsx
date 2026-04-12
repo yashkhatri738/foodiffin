@@ -1,10 +1,45 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import { register } from "@/lib/supabase/auth.action";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default function SignupPage() {
+  const {
+    register: formRegister,
+    handleSubmit,
+    formState,
+  } = useForm<{ fullName: string; email: string; password: string }>();
+  const { errors } = formState;
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const onSubmit = async (data: {
+    fullName: string;
+    email: string;
+    password: string;
+  }) => {
+    setIsSubmitting(true);
+    try {
+      const result = await register(data.fullName, data.email, data.password);
+      if (!result.success) {
+        toast("Registration failed");
+      } else {
+        toast("Registration successful! Please check your email to confirm your account.");
+        redirect("/");
+      }
+    } catch (error) {
+      console.error("Registration failed:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 p-6">
       <style>{`
@@ -107,34 +142,115 @@ export default function SignupPage() {
             <span className="flex-1 h-px bg-gray-300" />
           </div>
 
-          <div className="w-full mb-3">
-            <input
-              className="w-full px-4.5 py-3 border border-gray-200 rounded-lg font-poppins text-sm text-gray-700 outline-none bg-gray-50 focus:border-orange-600 focus:bg-white focus:shadow-sm focus:ring-2 focus:ring-orange-100 placeholder-gray-400 transition-all"
-              type="text"
-              placeholder="Full Name"
-            />
-          </div>
-          <div className="w-full mb-3">
-            <input
-              className="w-full px-4.5 py-3 border border-gray-200 rounded-lg font-poppins text-sm text-gray-700 outline-none bg-gray-50 focus:border-orange-600 focus:bg-white focus:shadow-sm focus:ring-2 focus:ring-orange-100 placeholder-gray-400 transition-all"
-              type="email"
-              placeholder="Email"
-            />
-          </div>
-          <div className="w-full mb-5">
-            <input
-              className="w-full px-4.5 py-3 border border-gray-200 rounded-lg font-poppins text-sm text-gray-700 outline-none bg-gray-50 focus:border-orange-600 focus:bg-white focus:shadow-sm focus:ring-2 focus:ring-orange-100 placeholder-gray-400 transition-all"
-              type="password"
-              placeholder="Password"
-            />
-          </div>
+          <form onSubmit={handleSubmit(onSubmit)} className="w-full">
+            <div className="w-full mb-3">
+              <input
+                {...formRegister("fullName", {
+                  required: "Full name is required",
+                })}
+                className="w-full px-4.5 py-3 border border-gray-200 rounded-lg font-poppins text-sm text-gray-700 outline-none bg-gray-50 focus:border-orange-600 focus:bg-white focus:shadow-sm focus:ring-2 focus:ring-orange-100 placeholder-gray-400 transition-all"
+                type="text"
+                placeholder="Full Name"
+                name="fullName"
+                aria-invalid={errors.fullName ? "true" : "false"}
+              />
+              {errors.fullName && (
+                <p className="text-sm text-red-500 mt-1 font-poppins">
+                  {(errors.fullName as any).message}
+                </p>
+              )}
+            </div>
+            <div className="w-full mb-3">
+              <input
+                {...formRegister("email", {
+                  required: "Email is required",
+                  pattern: {
+                    value: /^\S+@\S+\.\S+$/,
+                    message: "Invalid email address",
+                  },
+                })}
+                className="w-full px-4.5 py-3 border border-gray-200 rounded-lg font-poppins text-sm text-gray-700 outline-none bg-gray-50 focus:border-orange-600 focus:bg-white focus:shadow-sm focus:ring-2 focus:ring-orange-100 placeholder-gray-400 transition-all"
+                type="email"
+                placeholder="Email"
+                name="email"
+                aria-invalid={errors.email ? "true" : "false"}
+              />
+              {errors.email && (
+                <p className="text-sm text-red-500 mt-1 font-poppins">
+                  {(errors.email as any).message}
+                </p>
+              )}
+            </div>
+            <div className="w-full mb-5 relative">
+              <input
+                {...formRegister("password", {
+                  required: "Password is required",
+                  minLength: {
+                    value: 6,
+                    message: "Password must be at least 6 characters",
+                  },
+                })}
+                className="w-full px-4.5 py-3 pr-10 border border-gray-200 rounded-lg font-poppins text-sm text-gray-700 outline-none bg-gray-50 focus:border-orange-600 focus:bg-white focus:shadow-sm focus:ring-2 focus:ring-orange-100 placeholder-gray-400 transition-all"
+                type={showPassword ? "text" : "password"}
+                placeholder="Password"
+                name="password"
+                aria-invalid={errors.password ? "true" : "false"}
+              />
+              <button
+                type="button"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                onClick={() => setShowPassword((s) => !s)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-orange-600"
+              >
+                {showPassword ? (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-4.97 0-9.27-3-11-8 1.04-2.64 2.8-4.8 4.94-6.06" />
+                    <path d="M1 1l22 22" />
+                    <path d="M9.88 9.88A3 3 0 0 0 14.12 14.12" />
+                  </svg>
+                )}
+              </button>
+              {errors.password && (
+                <p className="text-sm text-red-500 mt-1 font-poppins">
+                  {(errors.password as any).message}
+                </p>
+              )}
+            </div>
 
-          <button
-            className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-none rounded-full px-11 py-3 font-poppins font-semibold text-sm tracking-wider cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-lg"
-            style={{ boxShadow: "0 6px 22px rgba(255,96,0,.35)" }}
-          >
-            SIGN UP
-          </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-none rounded-full px-11 py-3 font-poppins font-semibold text-sm tracking-wider cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{ boxShadow: "0 6px 22px rgba(255,96,0,.35)" }}
+            >
+              {isSubmitting ? "Signing..." : "SIGN UP"}
+            </button>
+          </form>
         </div>
       </div>
     </div>
