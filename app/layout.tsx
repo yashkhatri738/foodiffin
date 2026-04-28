@@ -1,20 +1,37 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
   subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const playfair = Playfair_Display({
   subsets: ["latin"],
+  variable: "--font-heading",
+  display: "swap",
+  weight: ["400", "600", "700", "800", "900"],
 });
 
 export const metadata: Metadata = {
-  title: "Foodie - Food Delivery",
-  description: "From Kitchen to Your Door - Delicious meals delivered fast",
+  title: "Foodiffin — Fresh Meals Delivered Daily",
+  description:
+    "Order fresh, home-style meals delivered to your doorstep. Tiffin subscriptions starting ₹99. Breakfast, lunch & dinner — made with love.",
+  keywords: [
+    "food delivery",
+    "tiffin service",
+    "meal subscription",
+    "fresh food",
+    "foodiffin",
+  ],
+  openGraph: {
+    title: "Foodiffin — Fresh Meals Delivered Daily",
+    description:
+      "Home-style tiffin meals delivered fresh every day. Starting at ₹99.",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -25,7 +42,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${playfair.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

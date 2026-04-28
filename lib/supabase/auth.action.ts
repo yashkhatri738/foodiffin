@@ -64,6 +64,15 @@ export async function register(
             return { success: false, error: res.error.message };
         }
 
+        // Upsert profile row using admin client (bypasses RLS, works before session is active)
+        const userId = res.data.user?.id;
+        if (userId) {
+            await supabaseAdmin.from("profiles").upsert(
+                { id: userId, full_name: fullName },
+                { onConflict: "id" }
+            );
+        }
+
         return { success: true, data: res.data };
     } catch (err: any) {
         return { success: false, error: err?.message ?? "Failed to register" };
