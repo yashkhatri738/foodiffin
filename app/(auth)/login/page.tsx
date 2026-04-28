@@ -23,8 +23,12 @@ export default function LoginPage() {
       if (!result.success) {
         toast("Wrong email or password");
       } else {
-        router.push("/");
-        // You can redirect the user or update the UI here
+        const role = (result.data as any)?.role;
+        if (role === "restaurant_admin") {
+          router.push("/admin/dashboard");
+        } else {
+          router.push("/");
+        }
       }
     } catch (error) {
       console.error("Login failed:", error);

@@ -18,11 +18,12 @@ export async function login(email: string, password: string): Promise<AuthResult
             password,
         });
 
-        if (res.error) {    
+        if (res.error) {
             return { success: false, error: res.error.message };
         }
 
-        return { success: true, data: res.data };
+        const role = res.data.user?.user_metadata?.role ?? null;
+        return { success: true, data: { ...res.data, role } };
     } catch (err: any) {
         return { success: false, error: err?.message ?? "Failed to login" };
     }

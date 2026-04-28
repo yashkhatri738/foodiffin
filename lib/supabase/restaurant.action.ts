@@ -1,6 +1,8 @@
 "use server";
 
 import { createClient } from "./server";
+import { supabaseAdmin } from "./admin";
+import { sendRestaurantCredentials } from "@/lib/email";
 
 type ActionResult<T = unknown> = {
     success: boolean;
@@ -72,6 +74,46 @@ export async function createRestaurant(formData: {
 
         if (error) {
             return { success: false, error: error.message };
+        }
+
+        // Generate a random password for the restaurant admin account
+        const password = generatePassword();
+
+        // Create a Supabase auth user for the restaurant admin
+        const { data: adminUser, error: adminError } =
+            await supabaseAdmin.auth.admin.createUser({
+                email: formData.email,
+                password,
+                email_confirm: true,
+                user_metadata: {
+                    role: "restaurant_admin",
+                    restaurant_id: (data as any).id,
+                    restaurant_name: formData.name,
+                },
+            });
+
+        if (adminError) {
+            // Roll back restaurant row so state stays consistent
+            await supabaseAdmin
+                .from("restaurants")
+                .delete()
+                .eq("id", (data as any).id);
+            return {
+                success: false,
+                error: `Failed to create admin account: ${adminError.message}`,
+            };
+        }
+
+        // Send credentials email
+        console.log(`[Restaurant Admin] Email: ${formData.email} | Password: ${password}`);
+        try {
+            await sendRestaurantCredentials({
+                restaurantName: formData.name,
+                email: formData.email,
+                password,
+            });
+        } catch {
+            // Email failure is non-fatal — restaurant + user already created
         }
 
         return { success: true, data };
@@ -263,4 +305,16 @@ export async function removeImageFromRestaurant(
             error: err?.message ?? "Failed to remove image",
         };
     }
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function generatePassword(length = 12): string {
+    const chars =
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$!";
+    const array = new Uint8Array(length);
+    crypto.getRandomValues(array);
+    return Array.from(array)
+        .map((b) => chars[b % chars.length])
+        .join("");
 }
