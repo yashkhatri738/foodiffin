@@ -62,12 +62,14 @@ foodiffin/
 ### Installation
 
 1. Clone the repository:
+
 ```bash
 git clone <repository-url>
 cd foodiffin
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 # or
@@ -77,7 +79,8 @@ pnpm install
 ```
 
 3. Set up environment variables:
-Create a `.env.local` file in the root directory and add your Supabase credentials:
+   Create a `.env.local` file in the root directory and add your Supabase credentials:
+
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
@@ -86,6 +89,7 @@ RESEND_API_KEY=your_resend_api_key
 ```
 
 4. Run the database migrations:
+
 ```bash
 # Execute the migration.sql file in your Supabase project
 ```
@@ -115,12 +119,12 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (admin access) |
-| `RESEND_API_KEY` | Resend API key for email functionality |
+| Variable                        | Description                              |
+| ------------------------------- | ---------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Your Supabase project URL                |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key                   |
+| `SUPABASE_SERVICE_ROLE_KEY`     | Supabase service role key (admin access) |
+| `RESEND_API_KEY`                | Resend API key for email functionality   |
 
 ## Deployment
 
