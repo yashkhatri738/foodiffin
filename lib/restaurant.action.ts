@@ -1,8 +1,8 @@
 "use server";
 
-import { createClient } from "./server";
-import { supabaseAdmin } from "./admin";
 import { sendRestaurantCredentials } from "@/lib/email";
+import { createClient } from "./supabase/server";
+import { supabaseAdmin } from "./supabase";
 
 type ActionResult<T = unknown> = {
     success: boolean;
@@ -10,7 +10,7 @@ type ActionResult<T = unknown> = {
     error?: string;
 };
 
-export async function getRestaurant(): Promise<ActionResult> {
+export async function getRestaurantById(): Promise<ActionResult> {
     try {
         const supabase = await createClient();
         const {
@@ -303,6 +303,27 @@ export async function removeImageFromRestaurant(
         return {
             success: false,
             error: err?.message ?? "Failed to remove image",
+        };
+    }
+}
+
+export async function getAllRestaurants(): Promise<ActionResult> {
+    try {
+        const supabase = await createClient();
+
+        const { data, error } = await supabase
+            .from("restaurants")
+            .select("*");
+
+        if (error) {
+            return { success: false, error: error.message };
+        }
+        return { success: true, data };
+    } catch (error: any) {
+        console.error("Error fetching restaurants:", error);
+        return {
+            success: false,
+            error: error?.message ?? "Failed to fetch restaurants",
         };
     }
 }

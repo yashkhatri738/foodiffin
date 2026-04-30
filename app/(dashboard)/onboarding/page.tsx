@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import {
@@ -19,15 +18,18 @@ import {
   Loader2,
   Check,
   Upload,
+  BadgeCheck,
+  Clock3,
+  Sparkles,
 } from "lucide-react";
 import {
-  getRestaurant,
+  getRestaurantById,
   createRestaurant,
   updateRestaurant,
   uploadRestaurantImage,
   addImageToRestaurant,
   removeImageFromRestaurant,
-} from "@/lib/supabase/restaurant.action";
+} from "@/lib/restaurant.action";
 
 interface RestaurantForm {
   name: string;
@@ -38,8 +40,12 @@ interface RestaurantForm {
   address: string;
 }
 
+type RestaurantData = Partial<RestaurantForm> & {
+  id?: string;
+  images?: string[];
+};
+
 export default function OnboardingPage() {
-  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -53,10 +59,10 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     async function load() {
-      const res = await getRestaurant();
+      const res = await getRestaurantById();
       if (res.success && res.data) {
-        const r = res.data as any;
-        setRestaurantId(r.id);
+        const r = res.data as RestaurantData;
+        setRestaurantId(r.id || null);
         setImages(r.images || []);
         setIsEdit(true);
         reset({
@@ -86,7 +92,12 @@ export default function OnboardingPage() {
       } else {
         const result = await createRestaurant(data);
         if (result.success && result.data) {
-          const newId = (result.data as any).id;
+          const newId = (result.data as RestaurantData).id;
+          if (!newId) {
+            toast.error("Restaurant created, but no id was returned");
+            setSaving(false);
+            return;
+          }
           setRestaurantId(newId);
           setIsEdit(true);
           toast.success("Restaurant created! You can now add images.");
@@ -148,7 +159,7 @@ export default function OnboardingPage() {
 
   if (loading) {
     return (
-      <div className="fd-profile-root">
+      <div className="user-portal-shell min-h-screen">
         <div className="fd-profile-loader">
           <Loader2 className="animate-spin" size={32} color="#e8590c" />
           <p>Loading...</p>
@@ -158,65 +169,103 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="fd-profile-root">
-      {/* Header */}
-      <div className="fd-onboard-header">
-        <div className="fd-onboard-header-inner">
-          <Link href="/profile" className="fd-profile-back">
+    <main className="user-portal-shell min-h-screen overflow-hidden p-3 text-stone-950 sm:p-5">
+      <div className="user-portal-glow user-portal-glow-one" />
+      <div className="user-portal-glow user-portal-glow-two" />
+
+      <section className="relative mx-auto flex max-w-6xl flex-col gap-4">
+        <header className="user-glass rounded-[30px] border border-white/70 p-5 shadow-xl shadow-stone-900/5 sm:p-7">
+          <Link
+            href="/profile"
+            className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-2 text-sm font-bold text-stone-600 transition hover:bg-white hover:text-orange-700"
+          >
             <ArrowLeft size={18} />
-            <span>Back to Profile</span>
+            Profile
           </Link>
-          <div className="fd-onboard-header-title">
-            <div className="fd-onboard-icon">
-              <Store size={24} />
-            </div>
+
+          <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
             <div>
-              <h1>{isEdit ? "Manage Restaurant" : "Restaurant Onboarding"}</h1>
-              <p>
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-orange-700">
+                <Sparkles size={14} />
+                Partner setup
+              </div>
+              <h1 className="max-w-2xl text-3xl font-black tracking-tight sm:text-5xl">
+                {isEdit ? "Tune your restaurant profile" : "Launch your kitchen"}
+              </h1>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-stone-600">
                 {isEdit
-                  ? "Update your restaurant details and images"
-                  : "Set up your restaurant to start receiving orders"}
+                  ? "Update your details, gallery, and customer-facing story in one focused flow."
+                  : "Add the essentials customers need before they order from your kitchen."}
               </p>
             </div>
-          </div>
-        </div>
 
-        {/* Steps indicator */}
-        <div className="fd-onboard-steps">
-          <div className="fd-onboard-step fd-onboard-step-active">
-            <div className="fd-onboard-step-dot">
-              {isEdit ? <Check size={12} /> : "1"}
+            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+              <div className="rounded-[24px] bg-stone-950 p-4 text-white shadow-2xl shadow-orange-500/20">
+                <div className="mb-6 flex items-center justify-between">
+                  <Store className="text-orange-200" size={22} />
+                  <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-black">
+                    {isEdit ? "Live" : "Draft"}
+                  </span>
+                </div>
+                <p className="text-2xl font-black">
+                  {images.length || 0} images
+                </p>
+                <p className="text-xs font-semibold text-white/55">
+                  Gallery assets ready
+                </p>
+              </div>
             </div>
-            <span>Details</span>
           </div>
-          <div className="fd-onboard-step-line" />
-          <div
-            className={`fd-onboard-step ${restaurantId ? "fd-onboard-step-active" : ""}`}
-          >
-            <div className="fd-onboard-step-dot">
-              {images.length > 0 ? <Check size={12} /> : "2"}
-            </div>
-            <span>Images</span>
-          </div>
-          <div className="fd-onboard-step-line" />
-          <div
-            className={`fd-onboard-step ${isEdit && images.length > 0 ? "fd-onboard-step-active" : ""}`}
-          >
-            <div className="fd-onboard-step-dot">
-              {isEdit && images.length > 0 ? <Check size={12} /> : "3"}
-            </div>
-            <span>Complete</span>
-          </div>
-        </div>
-      </div>
 
-      <div className="fd-onboard-content">
+          <div className="mt-7 grid gap-3 md:grid-cols-3">
+            <div className="user-step-card user-step-card-active">
+              <div className="user-step-dot">
+                {isEdit ? <Check size={13} /> : "1"}
+              </div>
+              <div>
+                <p className="font-black">Details</p>
+                <p className="text-xs text-stone-500">Kitchen identity</p>
+              </div>
+            </div>
+            <div className={`user-step-card ${restaurantId ? "user-step-card-active" : ""}`}>
+              <div className="user-step-dot">
+                {images.length > 0 ? <Check size={13} /> : "2"}
+              </div>
+              <div>
+                <p className="font-black">Gallery</p>
+                <p className="text-xs text-stone-500">Food photos</p>
+              </div>
+            </div>
+            <div
+              className={`user-step-card ${
+                isEdit && images.length > 0 ? "user-step-card-active" : ""
+              }`}
+            >
+              <div className="user-step-dot">
+                {isEdit && images.length > 0 ? <Check size={13} /> : "3"}
+              </div>
+              <div>
+                <p className="font-black">Ready</p>
+                <p className="text-xs text-stone-500">Portal enabled</p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_0.7fr]">
         {/* Restaurant Details Form */}
-        <div className="fd-profile-card">
-          <h3 className="fd-onboard-section-title">
-            <Store size={20} />
-            Restaurant Details
-          </h3>
+        <div className="user-card rounded-[30px] border border-white/75 bg-white/82 p-5 shadow-xl shadow-stone-900/5 sm:p-6">
+          <div className="mb-6 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-xl font-black tracking-tight">
+                Restaurant details
+              </h3>
+              <p className="text-sm text-stone-500">
+                Public information used on your restaurant listing.
+              </p>
+            </div>
+            <BadgeCheck size={22} className="text-emerald-600" />
+          </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="fd-onboard-form">
             <div className="fd-onboard-grid">
@@ -328,11 +377,19 @@ export default function OnboardingPage() {
         </div>
 
         {/* Images Section */}
-        <div className="fd-profile-card">
-          <h3 className="fd-onboard-section-title">
-            <ImagePlus size={20} />
-            Restaurant Images
-          </h3>
+        <aside className="flex flex-col gap-4">
+        <div className="user-card rounded-[30px] border border-white/75 bg-white/82 p-5 shadow-xl shadow-stone-900/5 sm:p-6">
+          <div className="mb-6 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-xl font-black tracking-tight">
+                Restaurant images
+              </h3>
+              <p className="text-sm text-stone-500">
+                Upload clean, bright photos of your food.
+              </p>
+            </div>
+            <ImagePlus size={22} className="text-orange-700" />
+          </div>
 
           {!restaurantId ? (
             <div className="fd-onboard-images-placeholder">
@@ -400,8 +457,8 @@ export default function OnboardingPage() {
 
         {/* Success banner */}
         {isEdit && images.length > 0 && (
-          <div className="fd-onboard-success">
-            <Check size={20} />
+          <div className="user-card rounded-[30px] border border-emerald-200 bg-emerald-50/90 p-5 text-emerald-800 shadow-xl shadow-emerald-900/5">
+            <Check size={22} />
             <div>
               <strong>Your restaurant is all set!</strong>
               <p>
@@ -410,7 +467,19 @@ export default function OnboardingPage() {
             </div>
           </div>
         )}
+          <div className="user-card rounded-[30px] border border-white/75 bg-stone-950 p-5 text-white shadow-2xl shadow-stone-950/20">
+            <Clock3 className="mb-6 text-orange-200" size={24} />
+            <h3 className="text-xl font-black tracking-tight">
+              Approval checklist
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-white/60">
+              Complete details and add at least one image before switching into
+              full admin operations.
+            </p>
+          </div>
+        </aside>
       </div>
-    </div>
+      </section>
+    </main>
   );
 }

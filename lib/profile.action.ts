@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "./server";
+import { createClient } from "./supabase/server";
 
 type ActionResult<T = unknown> = {
     success: boolean;
