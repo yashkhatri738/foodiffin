@@ -174,7 +174,7 @@ export default function OnboardingPage() {
       <div className="user-portal-glow user-portal-glow-two" />
 
       <section className="relative mx-auto flex max-w-6xl flex-col gap-4">
-        <header className="user-glass rounded-[30px] border border-white/70 p-5 shadow-xl shadow-stone-900/5 sm:p-7">
+        <header className="user-glass rounded-[24px] border border-white/70 p-4 shadow-xl shadow-stone-900/5 sm:p-5">
           <Link
             href="/profile"
             className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-2 text-sm font-bold text-stone-600 transition hover:bg-white hover:text-orange-700"
@@ -185,11 +185,11 @@ export default function OnboardingPage() {
 
           <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
             <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-orange-700">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-orange-700">
                 <Sparkles size={14} />
                 Partner setup
               </div>
-              <h1 className="max-w-2xl text-3xl font-black tracking-tight sm:text-5xl">
+              <h1 className="max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl">
                 {isEdit ? "Tune your restaurant profile" : "Launch your kitchen"}
               </h1>
               <p className="mt-3 max-w-xl text-sm leading-6 text-stone-600">
@@ -200,30 +200,30 @@ export default function OnboardingPage() {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-              <div className="rounded-[24px] bg-stone-950 p-4 text-white shadow-2xl shadow-orange-500/20">
-                <div className="mb-6 flex items-center justify-between">
-                  <Store className="text-orange-200" size={22} />
-                  <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-black">
+              <div className="rounded-[20px] bg-stone-950 p-3 text-white shadow-lg shadow-orange-500/20">
+                <div className="mb-4 flex items-center justify-between">
+                  <Store className="text-orange-200" size={20} />
+                  <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-bold">
                     {isEdit ? "Live" : "Draft"}
                   </span>
                 </div>
-                <p className="text-2xl font-black">
+                <p className="text-xl font-bold">
                   {images.length || 0} images
                 </p>
-                <p className="text-xs font-semibold text-white/55">
+                <p className="text-xs font-medium text-white/55">
                   Gallery assets ready
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="mt-7 grid gap-3 md:grid-cols-3">
+          <div className="mt-6 grid gap-2.5 md:grid-cols-3">
             <div className="user-step-card user-step-card-active">
               <div className="user-step-dot">
                 {isEdit ? <Check size={13} /> : "1"}
               </div>
               <div>
-                <p className="font-black">Details</p>
+                <p className="font-bold">Details</p>
                 <p className="text-xs text-stone-500">Kitchen identity</p>
               </div>
             </div>
@@ -232,7 +232,7 @@ export default function OnboardingPage() {
                 {images.length > 0 ? <Check size={13} /> : "2"}
               </div>
               <div>
-                <p className="font-black">Gallery</p>
+                <p className="font-bold">Gallery</p>
                 <p className="text-xs text-stone-500">Food photos</p>
               </div>
             </div>
@@ -245,7 +245,7 @@ export default function OnboardingPage() {
                 {isEdit && images.length > 0 ? <Check size={13} /> : "3"}
               </div>
               <div>
-                <p className="font-black">Ready</p>
+                <p className="font-bold">Ready</p>
                 <p className="text-xs text-stone-500">Portal enabled</p>
               </div>
             </div>
@@ -254,10 +254,10 @@ export default function OnboardingPage() {
 
       <div className="grid gap-4 lg:grid-cols-[1fr_0.7fr]">
         {/* Restaurant Details Form */}
-        <div className="user-card rounded-[30px] border border-white/75 bg-white/82 p-5 shadow-xl shadow-stone-900/5 sm:p-6">
-          <div className="mb-6 flex items-center justify-between gap-3">
+        <div className="user-card rounded-[24px] border border-white/75 bg-white/82 p-4 shadow-xl shadow-stone-900/5 sm:p-5">
+          <div className="mb-5 flex items-center justify-between gap-3">
             <div>
-              <h3 className="text-xl font-black tracking-tight">
+              <h3 className="text-lg font-bold tracking-tight">
                 Restaurant details
               </h3>
               <p className="text-sm text-stone-500">
@@ -378,10 +378,10 @@ export default function OnboardingPage() {
 
         {/* Images Section */}
         <aside className="flex flex-col gap-4">
-        <div className="user-card rounded-[30px] border border-white/75 bg-white/82 p-5 shadow-xl shadow-stone-900/5 sm:p-6">
-          <div className="mb-6 flex items-center justify-between gap-3">
+        <div className="user-card rounded-[24px] border border-white/75 bg-white/82 p-4 shadow-xl shadow-stone-900/5 sm:p-5">
+          <div className="mb-5 flex items-center justify-between gap-3">
             <div>
-              <h3 className="text-xl font-black tracking-tight">
+              <h3 className="text-lg font-bold tracking-tight">
                 Restaurant images
               </h3>
               <p className="text-sm text-stone-500">
@@ -457,19 +457,19 @@ export default function OnboardingPage() {
 
         {/* Success banner */}
         {isEdit && images.length > 0 && (
-          <div className="user-card rounded-[30px] border border-emerald-200 bg-emerald-50/90 p-5 text-emerald-800 shadow-xl shadow-emerald-900/5">
-            <Check size={22} />
+          <div className="user-card rounded-[24px] border border-emerald-200 bg-emerald-50/90 p-4 text-emerald-800 shadow-xl shadow-emerald-900/5">
+            <Check size={20} />
             <div>
-              <strong>Your restaurant is all set!</strong>
-              <p>
+              <strong className="font-bold">Your restaurant is all set!</strong>
+              <p className="text-sm">
                 You can update your details or images anytime from your profile.
               </p>
             </div>
           </div>
         )}
-          <div className="user-card rounded-[30px] border border-white/75 bg-stone-950 p-5 text-white shadow-2xl shadow-stone-950/20">
-            <Clock3 className="mb-6 text-orange-200" size={24} />
-            <h3 className="text-xl font-black tracking-tight">
+          <div className="user-card rounded-[24px] border border-white/75 bg-stone-950 p-4 text-white shadow-lg shadow-stone-950/20">
+            <Clock3 className="mb-5 text-orange-200" size={22} />
+            <h3 className="text-lg font-bold tracking-tight">
               Approval checklist
             </h3>
             <p className="mt-2 text-sm leading-6 text-white/60">

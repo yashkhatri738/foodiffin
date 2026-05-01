@@ -328,6 +328,106 @@ export async function getAllRestaurants(): Promise<ActionResult> {
     }
 }
 
+// ── Admin helpers ────────────────────────────────────────────────────────────
+
+export async function getRestaurantForAdmin(): Promise<ActionResult> {
+    try {
+        const supabase = await createClient();
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+            return { success: false, error: "Not authenticated" };
+        }
+
+        const restaurantId = user.user_metadata?.restaurant_id;
+
+        // Try admin metadata first, then fall back to owner_id
+        if (restaurantId) {
+            const { data, error } = await supabase
+                .from("restaurants")
+                .select("*")
+                .eq("id", restaurantId)
+                .single();
+
+            if (error) return { success: false, error: error.message };
+            return { success: true, data };
+        }
+
+        // Fallback: owner lookup
+        const { data, error } = await supabase
+            .from("restaurants")
+            .select("*")
+            .eq("owner_id", user.id)
+            .maybeSingle();
+
+        if (error) return { success: false, error: error.message };
+        return { success: true, data };
+    } catch (err: any) {
+        return {
+            success: false,
+            error: err?.message ?? "Failed to get restaurant",
+        };
+    }
+}
+
+export async function updateRestaurantAsAdmin(
+    restaurantId: string,
+    formData: {
+        name: string;
+        description: string;
+        phone: string;
+        country: string;
+        address: string;
+    }
+): Promise<ActionResult> {
+    try {
+        const supabase = await createClient();
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+            return { success: false, error: "Not authenticated" };
+        }
+
+        // Verify the user is allowed to edit this restaurant
+        const metaId = user.user_metadata?.restaurant_id;
+        const isOwner = !metaId; // owner doesn't have restaurant_id in metadata
+
+        const query = supabase
+            .from("restaurants")
+            .update({
+                name: formData.name,
+                description: formData.description,
+                phone: formData.phone,
+                country: formData.country,
+                address: formData.address,
+                updated_at: new Date().toISOString(),
+            })
+            .eq("id", restaurantId);
+
+        // Scope to correct user
+        if (isOwner) {
+            query.eq("owner_id", user.id);
+        }
+
+        const { error } = await query;
+
+        if (error) {
+            return { success: false, error: error.message };
+        }
+
+        return { success: true };
+    } catch (err: any) {
+        return {
+            success: false,
+            error: err?.message ?? "Failed to update restaurant",
+        };
+    }
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function generatePassword(length = 12): string {
