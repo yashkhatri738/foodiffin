@@ -328,6 +328,28 @@ export async function getAllRestaurants(): Promise<ActionResult> {
     }
 }
 
+export async function getRestaurantByIdPublic(id: string): Promise<ActionResult> {
+    try {
+        const supabase = await createClient();
+
+        const { data, error } = await supabase
+            .from("restaurants")
+            .select("*")
+            .eq("id", id)
+            .single();
+
+        if (error) {
+            return { success: false, error: error.message };
+        }
+        return { success: true, data };
+    } catch (error: any) {
+        return {
+            success: false,
+            error: error?.message ?? "Failed to fetch restaurant",
+        };
+    }
+}
+
 // ── Admin helpers ────────────────────────────────────────────────────────────
 
 export async function getRestaurantForAdmin(): Promise<ActionResult> {

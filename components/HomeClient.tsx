@@ -179,9 +179,10 @@ export default function HomeClient({
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredRestaurants.map((restaurant) => (
-              <article
+              <Link
                 key={restaurant.id}
-                className="group overflow-hidden rounded-xl border border-stone-200/80 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                href={`/restaurant/${restaurant.id}`}
+                className="group overflow-hidden rounded-xl border border-stone-200/80 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md block"
               >
                 <div className="relative aspect-[4/3] overflow-hidden bg-stone-100">
                   {restaurant.images?.[0] ? (
@@ -224,12 +225,12 @@ export default function HomeClient({
                     <span className="flex items-center gap-1 text-[11px] text-stone-400">
                       <Clock3 size={11} /> 25-35 min
                     </span>
-                    <button className="rounded-lg bg-orange-600 px-3 py-1 text-xs font-medium text-white transition hover:bg-orange-700">
-                      Order
-                    </button>
+                    <span className="rounded-lg bg-orange-600 px-3 py-1 text-xs font-medium text-white transition group-hover:bg-orange-700">
+                      View
+                    </span>
                   </div>
                 </div>
-              </article>
+              </Link>
             ))}
           </div>
         )}
