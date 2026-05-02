@@ -12,7 +12,8 @@ import {
 } from "lucide-react";
 import { getRestaurantByIdPublic } from "@/lib/restaurant.action";
 import { getDishesByRestaurant } from "@/lib/dish.action";
-import DishCard, { type DishData } from "@/components/DishCard";
+import { type DishData } from "@/components/DishCard";
+import RestaurantDishesClient from "@/components/RestaurantDishesClient";
 
 export const dynamic = "force-dynamic";
 
@@ -156,76 +157,12 @@ export default async function RestaurantPage({
         </div>
 
         {/* ─── Dishes ─── */}
-        <div>
-          <div className="mb-5">
-            <p className="mb-0.5 text-xs font-semibold uppercase tracking-wider text-orange-600">
-              Menu
-            </p>
-            <h2 className="text-2xl font-bold tracking-tight text-stone-800">
-              All Dishes
-            </h2>
-          </div>
-
-          {dishes.length === 0 ? (
-            <div className="rounded-2xl border border-stone-200 bg-white p-12 text-center">
-              <ChefHat className="mx-auto mb-3 text-orange-300" size={36} />
-              <h3 className="text-base font-semibold text-stone-600">
-                No dishes yet
-              </h3>
-              <p className="mt-1 text-sm text-stone-400">
-                This kitchen hasn&apos;t added any dishes yet. Check back soon!
-              </p>
-            </div>
-          ) : (
-            <>
-              {/* If there are categories, group by them */}
-              {categories.length > 0
-                ? categories.map((cat) => (
-                    <div key={cat} className="mb-8">
-                      <h3 className="mb-3 text-base font-semibold text-stone-700 capitalize">
-                        {cat}
-                      </h3>
-                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        {dishes
-                          .filter((d) => d.category === cat)
-                          .map((dish) => (
-                            <DishCard
-                              key={dish.id}
-                              dish={dish}
-                              restaurantId={restaurant.id}
-                              restaurantName={restaurant.name}
-                            />
-                          ))}
-                      </div>
-                    </div>
-                  ))
-                : null}
-
-              {/* Dishes without a category */}
-              {dishes.filter((d) => !d.category).length > 0 && (
-                <div className={categories.length > 0 ? "mb-8" : ""}>
-                  {categories.length > 0 && (
-                    <h3 className="mb-3 text-base font-semibold text-stone-700">
-                      Others
-                    </h3>
-                  )}
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {dishes
-                      .filter((d) => !d.category)
-                      .map((dish) => (
-                        <DishCard
-                          key={dish.id}
-                          dish={dish}
-                          restaurantId={restaurant.id}
-                          restaurantName={restaurant.name}
-                        />
-                      ))}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
+        <RestaurantDishesClient
+          dishes={dishes}
+          categories={categories}
+          restaurantId={restaurant.id}
+          restaurantName={restaurant.name}
+        />
       </div>
     </main>
   );
