@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { useCart } from "./CartContext";
+import Link from "next/link";
 
 export default function CartBar() {
   const { items, totalItems, totalPrice, increment, decrement, clear } =
@@ -102,9 +103,11 @@ export default function CartBar() {
           </button>
 
           {/* Checkout */}
-          <button className="rounded-xl bg-orange-600 px-5 py-1.5 text-xs font-bold text-white transition hover:bg-orange-700 active:scale-95">
-            Checkout →
-          </button>
+          <Link href="/checkout" className="ml-auto">
+            <button className="rounded-xl bg-orange-600 px-5 py-1.5 text-xs font-bold text-white transition hover:bg-orange-700 active:scale-95">
+              Order Now →
+            </button>
+          </Link>
         </div>
       </div>
     </div>

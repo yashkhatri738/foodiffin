@@ -130,8 +130,8 @@ export default function ProfilePage() {
                 Your Foodiffin profile
               </h1>
               <p className="mt-3 max-w-xl text-sm leading-6 text-stone-600">
-                Keep your account ready for faster checkout, saved kitchens,
-                and smooth restaurant partner switching.
+                Keep your account ready for faster checkout, saved kitchens, and
+                smooth restaurant partner switching.
               </p>
             </div>
 
@@ -164,6 +164,19 @@ export default function ProfilePage() {
               <p className="text-sm font-semibold text-stone-500">{email}</p>
 
               <div className="mt-6 grid gap-2.5 text-left">
+                <Link
+                  href="/orders"
+                  className="rounded-[18px] bg-gradient-to-r from-orange-500 to-orange-600 p-3 text-white transition hover:from-orange-600 hover:to-orange-700 hover:shadow-lg hover:shadow-orange-500/20"
+                >
+                  <p className="flex items-center gap-2 text-sm font-bold">
+                    <PackageCheck size={15} />
+                    My Orders
+                  </p>
+                  <p className="mt-1 text-xs font-medium text-white/80">
+                    View order history
+                  </p>
+                </Link>
+
                 {perks.map((perk) => (
                   <div
                     key={perk.label}
@@ -180,7 +193,6 @@ export default function ProfilePage() {
                 ))}
               </div>
             </section>
-
           </aside>
 
           <section className="flex flex-col gap-4">
@@ -197,7 +209,10 @@ export default function ProfilePage() {
                 <BadgeCheck size={22} className="text-emerald-600" />
               </div>
 
-              <form onSubmit={handleSubmit(onSubmit)} className="fd-profile-form">
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="fd-profile-form"
+              >
                 <div className="fd-profile-field">
                   <label htmlFor="full_name">
                     <User size={16} />
@@ -229,7 +244,9 @@ export default function ProfilePage() {
                       disabled
                       className="fd-profile-disabled"
                     />
-                    <span className="fd-profile-hint">Email cannot be changed</span>
+                    <span className="fd-profile-hint">
+                      Email cannot be changed
+                    </span>
                   </div>
 
                   <div className="fd-profile-field">
@@ -268,7 +285,9 @@ export default function ProfilePage() {
                     <Store size={22} />
                   </div>
                   <h3 className="text-xl font-bold tracking-tight">
-                    {hasRestaurant ? "Partner mode ready" : "Start selling meals"}
+                    {hasRestaurant
+                      ? "Partner mode ready"
+                      : "Start selling meals"}
                   </h3>
                   <p className="mt-2 max-w-xl text-sm leading-6 text-white/60">
                     {hasRestaurant
