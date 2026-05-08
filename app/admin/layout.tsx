@@ -21,6 +21,8 @@ import { logout } from "@/lib/supabase/auth.action";
 const navItems = [
   { label: "Overview", href: "/admin/dashboard", icon: LayoutDashboard },
   { label: "Dishes", href: "/admin/dishes", icon: Utensils },
+  { label: "Orders", href: "/admin/orders", icon: PackageCheck },
+  { label: "Settings", href: "/admin/settings", icon: Settings },
   { label: "Profile", href: "/admin/profile", icon: User },
 ];
 

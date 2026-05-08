@@ -114,9 +114,13 @@ export default function Navbar({ profile }: { profile?: UserProfile }) {
                 >
                   <User size={14} /> Profile
                 </Link>
-                <button className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-stone-600 transition hover:bg-stone-50 hover:text-orange-600">
+                <Link
+                  href="/orders"
+                  onClick={() => setDropdownOpen(false)}
+                  className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-stone-600 transition hover:bg-stone-50 hover:text-orange-600"
+                >
                   <ShoppingBag size={14} /> My Orders
-                </button>
+                </Link>
                 <div className="my-1 h-px bg-stone-100" />
                 <button
                   onClick={handleLogout}
