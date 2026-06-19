@@ -207,6 +207,155 @@ export async function uploadRestaurantImage(
     }
 }
 
+export async function uploadRestaurantLogo(
+    formData: FormData
+): Promise<ActionResult<string>> {
+    try {
+        const supabase = await createClient();
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+            return { success: false, error: "Not authenticated" };
+        }
+
+        const file = formData.get("file") as File;
+        if (!file) {
+            return { success: false, error: "No file provided" };
+        }
+
+        // Validate file type (only images)
+        if (!file.type.startsWith("image/")) {
+            return { success: false, error: "Only image files are allowed" };
+        }
+
+        // Validate file size (max 2MB for logo)
+        if (file.size > 2 * 1024 * 1024) {
+            return { success: false, error: "Logo must be less than 2MB" };
+        }
+
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${user.id}/logo_${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from("restaurant-logos")
+            .upload(fileName, file, {
+                cacheControl: "3600",
+                upsert: true
+            });
+
+        if (uploadError) {
+            return { success: false, error: uploadError.message };
+        }
+
+        const {
+            data: { publicUrl },
+        } = supabase.storage.from("restaurant-logos").getPublicUrl(fileName);
+
+        return { success: true, data: publicUrl };
+    } catch (err: any) {
+        return { success: false, error: err?.message ?? "Failed to upload logo" };
+    }
+}
+
+export async function uploadRestaurantBanner(
+    formData: FormData
+): Promise<ActionResult<string>> {
+    try {
+        const supabase = await createClient();
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+            return { success: false, error: "Not authenticated" };
+        }
+
+        const file = formData.get("file") as File;
+        if (!file) {
+            return { success: false, error: "No file provided" };
+        }
+
+        // Validate file type (only images)
+        if (!file.type.startsWith("image/")) {
+            return { success: false, error: "Only image files are allowed" };
+        }
+
+        // Validate file size (max 5MB for banner)
+        if (file.size > 5 * 1024 * 1024) {
+            return { success: false, error: "Banner must be less than 5MB" };
+        }
+
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${user.id}/banner_${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from("restaurant-banners")
+            .upload(fileName, file, {
+                cacheControl: "3600",
+                upsert: true
+            });
+
+        if (uploadError) {
+            return { success: false, error: uploadError.message };
+        }
+
+        const {
+            data: { publicUrl },
+        } = supabase.storage.from("restaurant-banners").getPublicUrl(fileName);
+
+        return { success: true, data: publicUrl };
+    } catch (err: any) {
+        return { success: false, error: err?.message ?? "Failed to upload banner" };
+    }
+}
+
+export async function updateRestaurantBranding(
+    restaurantId: string,
+    data: {
+        logo_url?: string;
+        banner_url?: string;
+        theme_color?: string;
+    }
+): Promise<ActionResult> {
+    try {
+        const supabase = await createClient();
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+            return { success: false, error: "Not authenticated" };
+        }
+
+        const updateData: any = {
+            updated_at: new Date().toISOString()
+        };
+
+        if (data.logo_url) updateData.logo_url = data.logo_url;
+        if (data.banner_url) updateData.banner_url = data.banner_url;
+        if (data.theme_color) updateData.theme_color = data.theme_color;
+
+        const { error } = await supabase
+            .from("restaurants")
+            .update(updateData)
+            .eq("id", restaurantId)
+            .eq("owner_id", user.id);
+
+        if (error) {
+            return { success: false, error: error.message };
+        }
+
+        return { success: true };
+    } catch (err: any) {
+        return {
+            success: false,
+            error: err?.message ?? "Failed to update branding",
+        };
+    }
+}
+
 export async function addImageToRestaurant(
     restaurantId: string,
     imageUrl: string

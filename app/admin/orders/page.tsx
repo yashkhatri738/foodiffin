@@ -103,8 +103,8 @@ const statusOptions = [
   { value: "pending", label: "Order Placed" },
   { value: "confirmed", label: "Confirmed" },
   { value: "packed", label: "Packed" },
-  { value: "out_for_delivery", label: "Out for Delivery" },
-  { value: "delivered", label: "Delivered" },
+//   { value: "out_for_delivery", label: "Out for Delivery" },
+//   { value: "delivered", label: "Delivered" },
   { value: "cancelled", label: "Cancelled" },
 ];
 

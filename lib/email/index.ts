@@ -3,19 +3,19 @@ import { Resend } from "resend";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendRestaurantCredentials({
-    restaurantName,
-    email,
-    password,
+  restaurantName,
+  email,
+  password,
 }: {
-    restaurantName: string;
-    email: string;
-    password: string;
+  restaurantName: string;
+  email: string;
+  password: string;
 }) {
-    const { error } = await resend.emails.send({
-        from: "FoodFinn <noreply@foodfinn.com>",
-        to: email,
-        subject: `Your FoodFinn Admin Credentials – ${restaurantName}`,
-        html: `
+  const { error } = await resend.emails.send({
+    from: "FoodFinn <noreply@foodfinn.com>",
+    to: email,
+    subject: `Your FoodFinn Admin Credentials – ${restaurantName}`,
+    html: `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -90,9 +90,9 @@ export async function sendRestaurantCredentials({
 </body>
 </html>
         `,
-    });
+  });
 
-    if (error) {
-        throw new Error(`Failed to send email: ${error.message}`);
-    }
+  if (error) {
+    throw new Error(`Failed to send email: ${error.message}`);
+  }
 }
