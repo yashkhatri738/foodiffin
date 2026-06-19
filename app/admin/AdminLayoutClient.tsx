@@ -7,19 +7,20 @@ import { Toaster, toast } from "sonner";
 import {
   ChefHat,
   LayoutDashboard,
-  LogOut,
   Menu,
   PackageCheck,
   Settings,
   User,
   Utensils,
   X,
+  Calendar,
+  ArrowLeftRight,
 } from "lucide-react";
-import { logout } from "@/lib/supabase/auth.action";
 
 const navItems = [
   { label: "Overview", href: "/admin/dashboard", icon: LayoutDashboard },
   { label: "Dishes", href: "/admin/dishes", icon: Utensils },
+  { label: "Tiffin Plans", href: "/admin/subscriptions", icon: Calendar },
   { label: "Orders", href: "/admin/orders", icon: PackageCheck },
   { label: "Settings", href: "/admin/settings", icon: Settings },
   { label: "Profile", href: "/admin/profile", icon: User },
@@ -33,16 +34,6 @@ export default function AdminLayoutClient({
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  const handleLogout = async () => {
-    const res = await logout();
-    if (res?.error) {
-      toast.error(res.error);
-    } else {
-      toast.success("Logged out");
-      router.push("/login");
-    }
-  };
 
   return (
     <div className="portal-shell min-h-screen text-stone-950">
@@ -87,13 +78,13 @@ export default function AdminLayoutClient({
           </nav>
 
           <div className="mt-auto flex flex-col gap-3">
-            <button
-              onClick={handleLogout}
-              className="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+            <Link
+              href="/"
+              className="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-sm font-bold text-orange-600 transition hover:bg-orange-55 shadow-sm hover:shadow"
             >
-              <LogOut size={17} />
-              Logout
-            </button>
+              <ArrowLeftRight size={17} />
+              Switch to User Mode
+            </Link>
           </div>
         </aside>
 
@@ -142,16 +133,14 @@ export default function AdminLayoutClient({
                 );
               })}
               <hr className="my-2 border-stone-200" />
-              <button
-                onClick={() => {
-                  setMobileOpen(false);
-                  handleLogout();
-                }}
-                className="flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-semibold text-red-600 hover:bg-red-50"
+              <Link
+                href="/"
+                onClick={() => setMobileOpen(false)}
+                className="flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-bold text-orange-600 hover:bg-white/80"
               >
-                <LogOut size={17} />
-                Logout
-              </button>
+                <ArrowLeftRight size={17} />
+                Switch to User Mode
+              </Link>
             </nav>
           </div>
         )}

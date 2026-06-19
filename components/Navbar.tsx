@@ -66,18 +66,18 @@ export default function Navbar({ profile }: { profile?: UserProfile }) {
           >
             Home
           </Link>
-          <a
-            href="#restaurants"
+          <Link
+            href="/kitchens"
             className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-500 transition hover:bg-stone-100 hover:text-stone-800"
           >
             Kitchens
-          </a>
-          <a
-            href="#about"
+          </Link>
+          <Link
+            href="/about"
             className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-500 transition hover:bg-stone-100 hover:text-stone-800"
           >
             About
-          </a>
+          </Link>
         </div>
 
         <div className="ml-auto" />
@@ -165,20 +165,20 @@ export default function Navbar({ profile }: { profile?: UserProfile }) {
           >
             Home
           </Link>
-          <a
-            href="#restaurants"
+          <Link
+            href="/kitchens"
             className="rounded-lg bg-white px-3 py-2 text-sm font-medium text-stone-600 hover:bg-stone-50"
             onClick={() => setMobileOpen(false)}
           >
             Kitchens
-          </a>
-          <a
-            href="#about"
+          </Link>
+          <Link
+            href="/about"
             className="rounded-lg bg-white px-3 py-2 text-sm font-medium text-stone-600 hover:bg-stone-50"
             onClick={() => setMobileOpen(false)}
           >
             About
-          </a>
+          </Link>
           {isLoggedIn ? (
             <Link
               href="/profile"

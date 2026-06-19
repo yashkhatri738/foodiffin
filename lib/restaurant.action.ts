@@ -599,6 +599,58 @@ export async function updateRestaurantAsAdmin(
     }
 }
 
+export async function updateRestaurantSettings(
+    restaurantId: string,
+    settings: {
+        is_open: boolean;
+        min_order_value: number;
+        delivery_charge: number;
+    }
+): Promise<ActionResult> {
+    try {
+        const supabase = await createClient();
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+            return { success: false, error: "Not authenticated" };
+        }
+
+        // Verify the user is allowed to edit this restaurant
+        const metaId = user.user_metadata?.restaurant_id;
+        const isOwner = !metaId; // owner doesn't have restaurant_id in metadata
+
+        const query = supabase
+            .from("restaurants")
+            .update({
+                is_open: settings.is_open,
+                min_order_value: settings.min_order_value,
+                delivery_charge: settings.delivery_charge,
+                updated_at: new Date().toISOString(),
+            })
+            .eq("id", restaurantId);
+
+        // Scope to correct user
+        if (isOwner) {
+            query.eq("owner_id", user.id);
+        }
+
+        const { error } = await query;
+
+        if (error) {
+            return { success: false, error: error.message };
+        }
+
+        return { success: true };
+    } catch (err: any) {
+        return {
+            success: false,
+            error: err?.message ?? "Failed to update restaurant settings",
+        };
+    }
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function generatePassword(length = 12): string {

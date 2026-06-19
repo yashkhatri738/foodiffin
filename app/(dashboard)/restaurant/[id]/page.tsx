@@ -12,8 +12,10 @@ import {
 } from "lucide-react";
 import { getRestaurantByIdPublic } from "@/lib/restaurant.action";
 import { getDishesByRestaurant } from "@/lib/dish.action";
+import { getTiffinPlansByRestaurant } from "@/lib/tiffin.action";
 import { type DishData } from "@/components/DishCard";
 import RestaurantDishesClient from "@/components/RestaurantDishesClient";
+import RestaurantRatingClient from "@/components/RestaurantRatingClient";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +27,10 @@ export default async function RestaurantPage({
 }) {
   const { id } = await params;
 
-  const [restaurantResult, dishesResult] = await Promise.all([
+  const [restaurantResult, dishesResult, tiffinPlansResult] = await Promise.all([
     getRestaurantByIdPublic(id),
     getDishesByRestaurant(id),
+    getTiffinPlansByRestaurant(id),
   ]);
 
   if (!restaurantResult.success || !restaurantResult.data) {
@@ -43,11 +46,16 @@ export default async function RestaurantPage({
     address?: string | null;
     phone?: string | null;
     email?: string | null;
+    average_rating?: number | null;
   };
 
   const dishes = (
     dishesResult.success && dishesResult.data ? dishesResult.data : []
   ) as DishData[];
+
+  const tiffinPlans = (
+    tiffinPlansResult.success && tiffinPlansResult.data ? tiffinPlansResult.data : []
+  );
 
   const heroImage = restaurant.images?.[0] ?? null;
 
@@ -120,7 +128,9 @@ export default async function RestaurantPage({
                       fill="currentColor"
                       className="text-amber-400"
                     />
-                    <span className="text-amber-300 font-medium">4.8</span>
+                    <span className="text-amber-300 font-medium">
+                      {restaurant.average_rating || 4.8}
+                    </span>
                     &nbsp;rating
                   </span>
                   <span className="flex items-center gap-1">
@@ -136,32 +146,39 @@ export default async function RestaurantPage({
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         {/* ─── Details strip ─── */}
-        <div className="mb-8 flex flex-wrap gap-6 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
-          {restaurant.description && (
-            <p className="w-full text-sm leading-relaxed text-stone-500">
-              {restaurant.description}
-            </p>
-          )}
-          {restaurant.phone && (
-            <div className="flex items-center gap-2 text-sm text-stone-500">
-              <Phone size={14} className="text-orange-500" />
-              {restaurant.phone}
+        <div className="mb-8 flex flex-col md:flex-row gap-6 justify-between items-start md:items-center rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+          <div className="flex-1 space-y-4">
+            {restaurant.description && (
+              <p className="w-full text-sm leading-relaxed text-stone-500">
+                {restaurant.description}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-6">
+              {restaurant.phone && (
+                <div className="flex items-center gap-2 text-sm text-stone-500">
+                  <Phone size={14} className="text-orange-500" />
+                  {restaurant.phone}
+                </div>
+              )}
+              {restaurant.email && (
+                <div className="flex items-center gap-2 text-sm text-stone-500">
+                  <Mail size={14} className="text-orange-500" />
+                  {restaurant.email}
+                </div>
+              )}
             </div>
-          )}
-          {restaurant.email && (
-            <div className="flex items-center gap-2 text-sm text-stone-500">
-              <Mail size={14} className="text-orange-500" />
-              {restaurant.email}
-            </div>
-          )}
+          </div>
+
+          <RestaurantRatingClient restaurantId={restaurant.id} />
         </div>
 
-        {/* ─── Dishes ─── */}
+        {/* ─── Dishes & Tiffin Plans ─── */}
         <RestaurantDishesClient
           dishes={dishes}
           categories={categories}
           restaurantId={restaurant.id}
           restaurantName={restaurant.name}
+          tiffinPlans={tiffinPlans}
         />
       </div>
     </main>

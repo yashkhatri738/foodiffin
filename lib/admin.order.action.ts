@@ -6,13 +6,30 @@ import { revalidatePath } from "next/cache";
 export async function getAllOrdersForAdmin() {
     const supabase = await createClient();
 
-    // Check if user is admin (you can add role check here)
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
         return { error: 'Not authenticated' };
     }
 
-    // Fetch all orders with related data
+    // Fetch user's restaurant ID
+    let restaurantId = user.user_metadata?.restaurant_id;
+    if (!restaurantId) {
+        const { data: restaurant } = await supabase
+            .from("restaurants")
+            .select("id")
+            .eq("owner_id", user.id)
+            .maybeSingle();
+        
+        if (restaurant) {
+            restaurantId = restaurant.id;
+        }
+    }
+
+    if (!restaurantId) {
+        return { data: [] }; // Return empty list instead of throwing an error
+    }
+
+    // Fetch all orders for this specific restaurant
     const { data: orders, error } = await supabase
         .from('orders')
         .select(`
@@ -33,6 +50,7 @@ export async function getAllOrdersForAdmin() {
                 )
             )
         `)
+        .eq('restaurant_id', restaurantId)
         .order('created_at', { ascending: false });
 
     if (error) {

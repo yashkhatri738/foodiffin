@@ -38,6 +38,7 @@ import {
   ProfileData,
 } from "@/lib/profile.action";
 import { getRestaurantById } from "@/lib/restaurant.action";
+import { getUserAddress, saveOrUpdateAddress } from "@/lib/address.action";
 
 // Tab types
 type TabType = "personal" | "preferences" | "addresses" | "notifications";
@@ -98,6 +99,19 @@ export default function ProfilePage() {
   const [hasRestaurant, setHasRestaurant] = useState(false);
   const [restaurantName, setRestaurantName] = useState("");
   const [isUnauthenticated, setIsUnauthenticated] = useState(false);
+  const [address, setAddress] = useState({
+    full_name: "",
+    phone: "",
+    address_line1: "",
+    address_line2: "",
+    landmark: "",
+    city: "",
+    state: "",
+    postal_code: "",
+    country: "India",
+    address_type: "home" as "home" | "office" | "other",
+  });
+  const [savingAddress, setSavingAddress] = useState(false);
 
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
@@ -107,9 +121,10 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function load() {
-      const [profileRes, restaurantRes] = await Promise.all([
+      const [profileRes, restaurantRes, addressRes] = await Promise.all([
         getProfile(),
         getRestaurantById(),
+        getUserAddress(),
       ]);
 
       if (profileRes.success && profileRes.data) {
@@ -139,6 +154,22 @@ export default function ProfilePage() {
         setRestaurantName(
           (restaurantRes.data as any).name || "Your Restaurant",
         );
+      }
+
+      if (addressRes && !("error" in addressRes) && addressRes.data) {
+        const addr = addressRes.data as any;
+        setAddress({
+          full_name: addr.full_name || "",
+          phone: addr.phone || "",
+          address_line1: addr.address_line1 || "",
+          address_line2: addr.address_line2 || "",
+          landmark: addr.landmark || "",
+          city: addr.city || "",
+          state: addr.state || "",
+          postal_code: addr.postal_code || "",
+          country: addr.country || "India",
+          address_type: addr.address_type || "home",
+        });
       }
 
       setLoading(false);
@@ -204,6 +235,18 @@ export default function ProfilePage() {
     if (result.success) toast.success("Notification settings saved!");
     else toast.error(result.error || "Failed to save settings");
     setSaving(false);
+  };
+
+  const handleAddressSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingAddress(true);
+    const result = await saveOrUpdateAddress(address);
+    if (result.success) {
+      toast.success("Address updated successfully!");
+    } else {
+      toast.error((result as any).error || "Failed to update address");
+    }
+    setSavingAddress(false);
   };
 
   const toggleAllergy = (allergy: string) => {
@@ -764,40 +807,176 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* Addresses Tab */}
-            {activeTab === "addresses" && (
-              <div>
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-xl font-bold text-stone-900">
-                      My Addresses
-                    </h2>
-                    <p className="text-sm text-stone-500">
-                      Manage your delivery addresses
-                    </p>
-                  </div>
-                  <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 transition">
-                    <Plus size={16} />
-                    Add New
-                  </button>
-                </div>
-                <div className="text-center py-12 border-2 border-dashed border-stone-200 rounded-2xl">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-stone-100 flex items-center justify-center">
-                    <MapPin size={28} className="text-stone-400" />
-                  </div>
-                  <h3 className="font-semibold text-stone-900 mb-1">
-                    No addresses saved
-                  </h3>
-                  <p className="text-sm text-stone-500 mb-4">
-                    Add your first delivery address
-                  </p>
-                  <button className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white text-sm font-semibold hover:shadow-lg hover:shadow-orange-500/25 transition">
-                    <Plus size={16} />
-                    Add Address
-                  </button>
-                </div>
-              </div>
-            )}
+             {/* Addresses Tab */}
+             {activeTab === "addresses" && (
+               <form onSubmit={handleAddressSubmit}>
+                 <div className="flex items-center justify-between mb-6">
+                   <div>
+                     <h2 className="text-xl font-bold text-stone-900">
+                       My Address
+                     </h2>
+                     <p className="text-sm text-stone-500">
+                       Manage your tiffin delivery address
+                     </p>
+                   </div>
+                   <MapPin className="text-orange-500" size={24} />
+                 </div>
+                 <div className="grid gap-5">
+                   <div className="grid sm:grid-cols-2 gap-5">
+                     <div>
+                       <label className="flex items-center gap-2 text-sm font-semibold text-stone-700 mb-2">
+                         Full Name
+                       </label>
+                       <input
+                         type="text"
+                         required
+                         placeholder="Recipient full name"
+                         value={address.full_name}
+                         onChange={(e) => setAddress({ ...address, full_name: e.target.value })}
+                         className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition"
+                       />
+                     </div>
+                     <div>
+                       <label className="flex items-center gap-2 text-sm font-semibold text-stone-700 mb-2">
+                         Phone Number
+                       </label>
+                       <input
+                         type="tel"
+                         required
+                         placeholder="Recipient phone number"
+                         value={address.phone}
+                         onChange={(e) => setAddress({ ...address, phone: e.target.value })}
+                         className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition"
+                       />
+                     </div>
+                   </div>
+
+                   <div>
+                     <label className="flex items-center gap-2 text-sm font-semibold text-stone-700 mb-2">
+                       Address Line 1
+                     </label>
+                     <input
+                       type="text"
+                       required
+                       placeholder="Flat, House no., Building, Apartment"
+                       value={address.address_line1}
+                       onChange={(e) => setAddress({ ...address, address_line1: e.target.value })}
+                       className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition"
+                     />
+                   </div>
+
+                   <div className="grid sm:grid-cols-2 gap-5">
+                     <div>
+                       <label className="flex items-center gap-2 text-sm font-semibold text-stone-700 mb-2">
+                         Address Line 2 (Optional)
+                       </label>
+                       <input
+                         type="text"
+                         placeholder="Area, Street, Sector, Village"
+                         value={address.address_line2}
+                         onChange={(e) => setAddress({ ...address, address_line2: e.target.value })}
+                         className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition"
+                       />
+                     </div>
+                     <div>
+                       <label className="flex items-center gap-2 text-sm font-semibold text-stone-700 mb-2">
+                         Landmark (Optional)
+                       </label>
+                       <input
+                         type="text"
+                         placeholder="e.g. Near Apollo Hospital"
+                         value={address.landmark}
+                         onChange={(e) => setAddress({ ...address, landmark: e.target.value })}
+                         className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition"
+                       />
+                     </div>
+                   </div>
+
+                   <div className="grid sm:grid-cols-3 gap-5">
+                     <div>
+                       <label className="flex items-center gap-2 text-sm font-semibold text-stone-700 mb-2">
+                         City
+                       </label>
+                       <input
+                         type="text"
+                         required
+                         placeholder="City"
+                         value={address.city}
+                         onChange={(e) => setAddress({ ...address, city: e.target.value })}
+                         className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition"
+                       />
+                     </div>
+                     <div>
+                       <label className="flex items-center gap-2 text-sm font-semibold text-stone-700 mb-2">
+                         State
+                       </label>
+                       <input
+                         type="text"
+                         required
+                         placeholder="State"
+                         value={address.state}
+                         onChange={(e) => setAddress({ ...address, state: e.target.value })}
+                         className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition"
+                       />
+                     </div>
+                     <div>
+                       <label className="flex items-center gap-2 text-sm font-semibold text-stone-700 mb-2">
+                         Postal Code (PIN)
+                       </label>
+                       <input
+                         type="text"
+                         required
+                         placeholder="6-digit PIN code"
+                         value={address.postal_code}
+                         onChange={(e) => setAddress({ ...address, postal_code: e.target.value })}
+                         className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition"
+                       />
+                     </div>
+                   </div>
+
+                   <div>
+                     <label className="flex items-center gap-2 text-sm font-semibold text-stone-700 mb-2">
+                       Address Type
+                     </label>
+                     <div className="flex gap-3">
+                       {(["home", "office", "other"] as const).map((type) => (
+                         <label
+                           key={type}
+                           className={`px-5 py-2.5 rounded-xl border-2 cursor-pointer transition capitalize ${
+                             address.address_type === type
+                               ? "border-orange-500 bg-orange-50 text-orange-600 font-semibold"
+                               : "border-stone-200 hover:border-stone-300 text-stone-600"
+                           }`}
+                         >
+                           <input
+                             type="radio"
+                             name="address_type"
+                             value={type}
+                             checked={address.address_type === type}
+                             onChange={() => setAddress({ ...address, address_type: type })}
+                             className="hidden"
+                           />
+                           {type}
+                         </label>
+                       ))}
+                     </div>
+                   </div>
+                 </div>
+
+                 <button
+                   type="submit"
+                   disabled={savingAddress}
+                   className="mt-6 w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold hover:shadow-lg hover:shadow-orange-500/25 disabled:opacity-50 transition"
+                 >
+                   {savingAddress ? (
+                     <Loader2 size={18} className="animate-spin" />
+                   ) : (
+                     <Save size={18} />
+                   )}
+                   {savingAddress ? "Saving..." : "Save Address"}
+                 </button>
+               </form>
+             )}
 
             {/* Notifications Tab */}
             {activeTab === "notifications" && (
