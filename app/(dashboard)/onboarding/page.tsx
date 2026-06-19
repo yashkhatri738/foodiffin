@@ -155,48 +155,14 @@ export default function OnboardingPage() {
     async function load() {
       const res = await getRestaurantById();
       if (res.success && res.data) {
-        const r = res.data as RestaurantData;
-        setRestaurantId(r.id || null);
-        setImages(r.images || []);
-        setIsEdit(true);
-        setSelectedCuisines(r.cuisine_types || []);
-        setFeatures({
-          pure_veg: r.pure_veg || false,
-          has_parking: r.has_parking || false,
-          has_wifi: r.has_wifi || false,
-        });
-        setPayments({
-          accepts_card: r.accepts_card ?? true,
-          accepts_upi: r.accepts_upi ?? true,
-          accepts_cash: r.accepts_cash ?? true,
-        });
-        if (r.operating_hours) setOperatingHours(r.operating_hours);
-        reset({
-          name: r.name || "",
-          tagline: r.tagline || "",
-          description: r.description || "",
-          email: r.email || "",
-          phone: r.phone || "",
-          country: r.country || "India",
-          address: r.address || "",
-          city: r.city || "",
-          state: r.state || "",
-          pincode: r.pincode || "",
-        });
-        // Mark steps as completed based on data
-        const completed: number[] = [];
-        if (r.name) completed.push(1);
-        if (r.address || r.city) completed.push(2);
-        if (r.phone || r.email) completed.push(3);
-        completed.push(4); // Hours always has defaults
-        completed.push(5); // Features always has defaults
-        if ((r.images?.length || 0) > 0) completed.push(6);
-        setCompletedSteps(completed);
+        toast.error("You have already registered a restaurant!");
+        router.push("/profile");
+        return;
       }
       setLoading(false);
     }
     load();
-  }, [reset]);
+  }, [reset, router]);
 
   const toggleCuisine = (cuisine: string) => {
     setSelectedCuisines((prev) =>

@@ -97,6 +97,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [hasRestaurant, setHasRestaurant] = useState(false);
   const [restaurantName, setRestaurantName] = useState("");
+  const [isUnauthenticated, setIsUnauthenticated] = useState(false);
 
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
@@ -129,6 +130,8 @@ export default function ProfilePage() {
         setDietaryPref(p.dietary_preference || "none");
         setSelectedAllergies(p.allergies || []);
         setSelectedCuisines(p.favorite_cuisines || []);
+      } else {
+        setIsUnauthenticated(true);
       }
 
       if (restaurantRes.success && restaurantRes.data) {
@@ -237,6 +240,97 @@ export default function ProfilePage() {
           <p className="text-stone-600 font-medium">Loading your profile...</p>
         </div>
       </div>
+    );
+  }
+
+  if (isUnauthenticated) {
+    return (
+      <main className="min-h-[90vh] bg-gradient-to-br from-orange-50 via-white to-amber-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full relative">
+          {/* Decorative background glows */}
+          <div className="absolute -top-10 -left-10 w-40 h-40 bg-orange-200 rounded-full blur-3xl opacity-50 animate-pulse" />
+          <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-amber-200 rounded-full blur-3xl opacity-50 animate-pulse" />
+
+          {/* Premium Glassmorphic Card */}
+          <div className="relative bg-white/80 backdrop-blur-xl border border-white/60 rounded-[32px] shadow-2xl p-8 text-center overflow-hidden">
+            {/* Pulsing glow ring around User Icon */}
+            <div className="relative mx-auto w-20 h-20 mb-6 flex items-center justify-center rounded-3xl bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/20 hover:scale-105 transition-transform duration-300">
+              <span className="absolute inset-0 rounded-3xl bg-orange-400 animate-ping opacity-25" />
+              <User size={36} className="relative z-10" />
+            </div>
+
+            <h1 className="text-3xl font-extrabold text-stone-900 tracking-tight mb-2">
+              Unlock Your Profile
+            </h1>
+            <p className="text-stone-600 text-sm mb-6 leading-relaxed">
+              Join us to track tiffin deliveries, save your customized food preferences, manage multiple addresses, and claim loyalty rewards.
+            </p>
+
+            {/* Premium feature lists */}
+            <div className="space-y-3 mb-8 text-left max-w-sm mx-auto bg-stone-50/60 p-4.5 rounded-2xl border border-stone-100">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
+                  <PackageCheck size={16} className="text-orange-600" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-stone-900">Track Subs & Orders</h4>
+                  <p className="text-[11px] text-stone-500">Live updates and billing details</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
+                  <Utensils size={16} className="text-orange-600" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-stone-900">Food Preferences</h4>
+                  <p className="text-[11px] text-stone-500">Customize spice level, allergies & cuisines</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
+                  <MapPin size={16} className="text-orange-600" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-stone-900">Saved Addresses</h4>
+                  <p className="text-[11px] text-stone-500">Save work, home, or hostel locations</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
+                  <Gift size={16} className="text-orange-600" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-stone-900">Loyalty Points</h4>
+                  <p className="text-[11px] text-stone-500">Earn rewards with every meal subscription</p>
+                </div>
+              </div>
+            </div>
+
+            {/* CTAs */}
+            <div className="flex flex-col gap-3">
+              <Link
+                href="/login"
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold text-sm shadow-md hover:shadow-lg hover:shadow-orange-500/20 hover:-translate-y-0.5 transition duration-200 active:translate-y-0"
+              >
+                Log In to Your Account
+              </Link>
+              <Link
+                href="/signup"
+                className="w-full py-3 rounded-xl bg-stone-100 text-stone-700 font-semibold text-sm hover:bg-stone-200/80 transition duration-200"
+              >
+                Create a New Account
+              </Link>
+              <Link
+                href="/"
+                className="inline-flex items-center justify-center gap-2 text-stone-500 hover:text-stone-800 text-xs font-medium mt-4 transition duration-200"
+              >
+                <ArrowLeft size={14} />
+                Back to Home
+              </Link>
+            </div>
+          </div>
+        </div>
+      </main>
     );
   }
 
