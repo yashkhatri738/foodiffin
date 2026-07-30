@@ -5,11 +5,12 @@ import { useState } from "react";
 import { register } from "@/lib/supabase/auth.action";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default function SignupPage() {
+  const router = useRouter();
   const {
     register: formRegister,
     handleSubmit,
@@ -28,13 +29,14 @@ export default function SignupPage() {
     try {
       const result = await register(data.fullName, data.email, data.password);
       if (!result.success) {
-        toast("Registration failed");
+        toast.error(result.error || "Registration failed. Please check your details.");
       } else {
-        toast("Registration successful! Please check your email to confirm your account.");
-        redirect("/");
+        toast.success("Account created successfully! Redirecting...");
+        router.push("/");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Registration failed:", error);
+      toast.error(error?.message || "An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -65,7 +67,7 @@ export default function SignupPage() {
             To keep connected with us please login with your personal info
           </p>
           <Link href="/login" className="relative z-10">
-            <button className="bg-transparent text-white border-2 border-white/75 rounded-full px-10 py-2.75 font-poppins font-semibold text-sm tracking-wider cursor-pointer transition-all hover:bg-white/15 hover:-translate-y-0.5">
+            <button className="bg-transparent text-white border-2 border-white/75 rounded-full px-10 py-3 font-poppins font-semibold text-sm tracking-wider cursor-pointer transition-all hover:bg-white/15 hover:-translate-y-0.5">
               SIGN IN
             </button>
           </Link>
@@ -80,7 +82,7 @@ export default function SignupPage() {
             Create Account
           </h1>
 
-          <div className="flex gap-3 mb-3">
+          <div className="flex gap-3 mb-4">
             <SocialBtn title="Google">
               <svg width="18" height="18" viewBox="0 0 24 24">
                 <path
@@ -134,7 +136,7 @@ export default function SignupPage() {
             </SocialBtn>
           </div>
 
-          <div className="flex items-center gap-2.5 w-full my-4.5">
+          <div className="flex items-center gap-3 w-full my-5">
             <span className="flex-1 h-px bg-gray-300" />
             <span className="font-poppins text-xs text-gray-400 whitespace-nowrap">
               Or register with email
@@ -142,13 +144,13 @@ export default function SignupPage() {
             <span className="flex-1 h-px bg-gray-300" />
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="w-full">
-            <div className="w-full mb-3">
+          <form onSubmit={handleSubmit(onSubmit)} className="w-full flex flex-col">
+            <div className="w-full mb-4">
               <input
                 {...formRegister("fullName", {
                   required: "Full name is required",
                 })}
-                className="w-full px-4.5 py-3 border border-gray-200 rounded-lg font-poppins text-sm text-gray-700 outline-none bg-gray-50 focus:border-orange-600 focus:bg-white focus:shadow-sm focus:ring-2 focus:ring-orange-100 placeholder-gray-400 transition-all"
+                className="w-full px-5 py-3 border border-gray-200 rounded-lg font-poppins text-sm text-gray-700 outline-none bg-gray-50 focus:border-orange-600 focus:bg-white focus:shadow-sm focus:ring-2 focus:ring-orange-100 placeholder-gray-400 transition-all"
                 type="text"
                 placeholder="Full Name"
                 name="fullName"
@@ -160,7 +162,7 @@ export default function SignupPage() {
                 </p>
               )}
             </div>
-            <div className="w-full mb-3">
+            <div className="w-full mb-4">
               <input
                 {...formRegister("email", {
                   required: "Email is required",
@@ -169,7 +171,7 @@ export default function SignupPage() {
                     message: "Invalid email address",
                   },
                 })}
-                className="w-full px-4.5 py-3 border border-gray-200 rounded-lg font-poppins text-sm text-gray-700 outline-none bg-gray-50 focus:border-orange-600 focus:bg-white focus:shadow-sm focus:ring-2 focus:ring-orange-100 placeholder-gray-400 transition-all"
+                className="w-full px-5 py-3 border border-gray-200 rounded-lg font-poppins text-sm text-gray-700 outline-none bg-gray-50 focus:border-orange-600 focus:bg-white focus:shadow-sm focus:ring-2 focus:ring-orange-100 placeholder-gray-400 transition-all"
                 type="email"
                 placeholder="Email"
                 name="email"
@@ -181,7 +183,7 @@ export default function SignupPage() {
                 </p>
               )}
             </div>
-            <div className="w-full mb-5 relative">
+            <div className="w-full mb-6 relative">
               <input
                 {...formRegister("password", {
                   required: "Password is required",
@@ -190,7 +192,7 @@ export default function SignupPage() {
                     message: "Password must be at least 6 characters",
                   },
                 })}
-                className="w-full px-4.5 py-3 pr-10 border border-gray-200 rounded-lg font-poppins text-sm text-gray-700 outline-none bg-gray-50 focus:border-orange-600 focus:bg-white focus:shadow-sm focus:ring-2 focus:ring-orange-100 placeholder-gray-400 transition-all"
+                className="w-full px-5 py-3 pr-10 border border-gray-200 rounded-lg font-poppins text-sm text-gray-700 outline-none bg-gray-50 focus:border-orange-600 focus:bg-white focus:shadow-sm focus:ring-2 focus:ring-orange-100 placeholder-gray-400 transition-all"
                 type={showPassword ? "text" : "password"}
                 placeholder="Password"
                 name="password"
@@ -200,7 +202,7 @@ export default function SignupPage() {
                 type="button"
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 onClick={() => setShowPassword((s) => !s)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-orange-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-orange-600"
               >
                 {showPassword ? (
                   <svg
@@ -230,7 +232,7 @@ export default function SignupPage() {
                     strokeLinejoin="round"
                   >
                     <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-4.97 0-9.27-3-11-8 1.04-2.64 2.8-4.8 4.94-6.06" />
-                    <path d="M1 1l22 22" />
+                    <path d="M1.1 1.1l22 22" />
                     <path d="M9.88 9.88A3 3 0 0 0 14.12 14.12" />
                   </svg>
                 )}
@@ -245,7 +247,7 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-none rounded-full px-11 py-3 font-poppins font-semibold text-sm tracking-wider cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-fit mx-auto bg-gradient-to-br from-orange-500 to-orange-600 text-white border-none rounded-full px-11 py-3 font-poppins font-semibold text-sm tracking-wider cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
               style={{ boxShadow: "0 6px 22px rgba(255,96,0,.35)" }}
             >
               {isSubmitting ? "Signing..." : "SIGN UP"}

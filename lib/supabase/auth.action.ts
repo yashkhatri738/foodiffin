@@ -51,6 +51,30 @@ export async function register(
 ): Promise<AuthResult> {
     try {
         const supabase = await createClient();
+
+        // Check if email already exists
+        const { data: users, error: listError } =
+            await supabaseAdmin.auth.admin.listUsers();
+
+        if (listError) {
+            return {
+                success: false,
+                error: "Unable to verify existing users.",
+            };
+        }
+
+        const existingUser = users.users.find(
+            (user) => user.email?.toLowerCase() === email.toLowerCase()
+        );
+
+        if (existingUser) {
+            return {
+                success: false,
+                error: "Email already registered.",
+            };
+        }
+
+        // Create user
         const res = await supabase.auth.signUp({
             email,
             password,
@@ -62,20 +86,33 @@ export async function register(
         });
 
         if (res.error) {
-            return { success: false, error: res.error.message };
+            return {
+                success: false,
+                error: res.error.message,
+            };
         }
 
-        // Upsert profile row using admin client (bypasses RLS, works before session is active)
         const userId = res.data.user?.id;
+
         if (userId) {
             await supabaseAdmin.from("profiles").upsert(
-                { id: userId, full_name: fullName },
-                { onConflict: "id" }
+                {
+                    id: userId,
+                    full_name: fullName,
+                },
+                {
+                    onConflict: "id",
+                }
             );
         }
 
-        return { success: true, data: res.data };
+        return {
+            success: true,
+        };
     } catch (err: any) {
-        return { success: false, error: err?.message ?? "Failed to register" };
+        return {
+            success: false,
+            error: err?.message ?? "Failed to register",
+        };
     }
 }

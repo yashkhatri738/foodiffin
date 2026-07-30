@@ -12,6 +12,7 @@ import {
   Clock,
   Sparkles,
   Info,
+  MapPin,
 } from "lucide-react";
 import {
   getRestaurantForAdmin,
@@ -34,16 +35,20 @@ export default function StoreSettingsPage() {
   const [isOpen, setIsOpen] = useState(true);
   const [minOrder, setMinOrder] = useState(0);
   const [deliveryCharge, setDeliveryCharge] = useState(0);
+  const [latitude, setLatitude] = useState(19.076);
+  const [longitude, setLongitude] = useState(72.877);
 
   useEffect(() => {
     async function load() {
       const res = await getRestaurantForAdmin();
       if (res.success && res.data) {
-        const r = res.data as SettingsData;
+        const r = res.data as any;
         setRestaurantId(r.id);
         setIsOpen(r.is_open ?? true);
         setMinOrder(r.min_order_value ?? 0);
         setDeliveryCharge(r.delivery_charge ?? 0);
+        setLatitude(r.latitude ?? 19.076);
+        setLongitude(r.longitude ?? 72.877);
       } else {
         toast.error("Failed to load restaurant settings");
       }
@@ -61,6 +66,8 @@ export default function StoreSettingsPage() {
       is_open: isOpen,
       min_order_value: minOrder,
       delivery_charge: deliveryCharge,
+      latitude,
+      longitude,
     });
 
     if (res.success) {
@@ -203,6 +210,70 @@ export default function StoreSettingsPage() {
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* Coordinates Config */}
+          <div className="portal-card rounded-[24px] border border-white/75 bg-white/82 p-5 shadow-xl shadow-stone-900/5">
+            <div className="flex items-center gap-3 mb-5 border-b border-stone-100 pb-3">
+              <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
+                <MapPin size={20} />
+              </div>
+              <div>
+                <h3 className="font-bold text-stone-900">Physical Coordinates</h3>
+                <p className="text-xs text-stone-500">Determine payouts by calculating rider distance</p>
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4 mb-4">
+              <div className="flex flex-col gap-2">
+                <label htmlFor="latitudeInput" className="text-sm font-semibold text-stone-700">
+                  Latitude
+                </label>
+                <input
+                  id="latitudeInput"
+                  type="number"
+                  step="any"
+                  required
+                  value={latitude}
+                  onChange={(e) => setLatitude(Number(e.target.value))}
+                  className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition text-sm"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label htmlFor="longitudeInput" className="text-sm font-semibold text-stone-700">
+                  Longitude
+                </label>
+                <input
+                  id="longitudeInput"
+                  type="number"
+                  step="any"
+                  required
+                  value={longitude}
+                  onChange={(e) => setLongitude(Number(e.target.value))}
+                  className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition text-sm"
+                />
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                      setLatitude(pos.coords.latitude);
+                      setLongitude(pos.coords.longitude);
+                      toast.success("Current kitchen coordinates detected!");
+                    },
+                    () => toast.error("Could not access browser location.")
+                  );
+                }
+              }}
+              className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold text-xs transition"
+            >
+              <MapPin size={14} />
+              Detect Kitchen Location Coordinates
+            </button>
           </div>
         </div>
 

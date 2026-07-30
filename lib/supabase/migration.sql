@@ -47,18 +47,96 @@ CREATE TRIGGER on_auth_user_created
 
 -- 2. Restaurants table
 CREATE TABLE IF NOT EXISTS public.restaurants (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  description TEXT,
-  email TEXT,
-  phone TEXT,
-  country TEXT,
-  address TEXT,
-  images TEXT[] DEFAULT '{}',
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
+  id uuid not null default gen_random_uuid (),
+  owner_id uuid not null,
+  name text not null,
+  description text null,
+  email text null,
+  phone text null,
+  country text null,
+  address text null,
+  images text[] null default '{}'::text[],
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null default now(),
+  tagline text null,
+  cuisine_types text[] null default '{}'::text[],
+  logo_url text null,
+  banner_url text null,
+  theme_color text null default '#ea580c'::text,
+  address_line1 text null,
+  address_line2 text null,
+  landmark text null,
+  city text null,
+  state text null,
+  postal_code text null,
+  latitude numeric(10, 8) null,
+  longitude numeric(11, 8) null,
+  gst_number text null,
+  fssai_license text null,
+  pan_number text null,
+  opening_time time without time zone null,
+  closing_time time without time zone null,
+  days_open text[] null default array[
+    'monday'::text,
+    'tuesday'::text,
+    'wednesday'::text,
+    'thursday'::text,
+    'friday'::text,
+    'saturday'::text,
+    'sunday'::text
+  ],
+  is_open_now boolean null default true,
+  average_prep_time integer null default 30,
+  accepts_delivery boolean null default true,
+  accepts_pickup boolean null default true,
+  accepts_dine_in boolean null default false,
+  delivery_radius numeric(5, 2) null default 5.0,
+  minimum_order_value numeric(10, 2) null default 0,
+  delivery_fee numeric(10, 2) null default 0,
+  free_delivery_above numeric(10, 2) null,
+  packaging_charge numeric(10, 2) null default 0,
+  accepts_cash boolean null default true,
+  accepts_card boolean null default true,
+  accepts_upi boolean null default true,
+  accepts_wallet boolean null default true,
+  bank_account_number text null,
+  bank_ifsc text null,
+  bank_account_holder text null,
+  upi_id text null,
+  whatsapp_number text null,
+  website_url text null,
+  instagram_handle text null,
+  facebook_url text null,
+  is_pure_veg boolean null default false,
+  has_parking boolean null default false,
+  has_wifi boolean null default false,
+  has_ac boolean null default false,
+  has_outdoor_seating boolean null default false,
+  average_rating numeric(3, 2) null default 0,
+  total_reviews integer null default 0,
+  total_orders integer null default 0,
+  is_verified boolean null default false,
+  is_active boolean null default true,
+  is_featured boolean null default false,
+  is_accepting_orders boolean null default true,
+  is_open boolean null default true,
+  min_order_value numeric null default 0,
+  delivery_charge numeric null default 0,
+  rating_sum numeric null default 0,
+  rating_count integer null default 0,
+  constraint restaurants_pkey primary key (id),
+  constraint restaurants_owner_id_fkey foreign KEY (owner_id) references profiles (id) on delete CASCADE
 );
+
+CREATE INDEX IF NOT EXISTS idx_restaurants_city on public.restaurants using btree (city);
+CREATE INDEX IF NOT EXISTS idx_restaurants_state on public.restaurants using btree (state);
+CREATE INDEX IF NOT EXISTS idx_restaurants_cuisine on public.restaurants using gin (cuisine_types);
+CREATE INDEX IF NOT EXISTS idx_restaurants_rating on public.restaurants using btree (average_rating desc);
+CREATE INDEX IF NOT EXISTS idx_restaurants_active on public.restaurants using btree (is_active, is_accepting_orders);
+CREATE INDEX IF NOT EXISTS idx_restaurants_location on public.restaurants using btree (latitude, longitude);
+CREATE INDEX IF NOT EXISTS idx_restaurants_featured on public.restaurants using btree (is_featured, is_active);
+CREATE INDEX IF NOT EXISTS idx_restaurants_pure_veg on public.restaurants using btree (is_pure_veg);
+
 
 -- Enable RLS
 ALTER TABLE public.restaurants ENABLE ROW LEVEL SECURITY;

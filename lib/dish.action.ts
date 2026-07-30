@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "./supabase/server";
+import { supabaseAdmin } from "./supabase";
 
 type ActionResult<T = unknown> = {
     success: boolean;
@@ -27,9 +28,7 @@ export async function getDishesByRestaurant(
     restaurantId: string
 ): Promise<ActionResult> {
     try {
-        const supabase = await createClient();
-
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
             .from("dishes")
             .select("*")
             .eq("restaurant_id", restaurantId)

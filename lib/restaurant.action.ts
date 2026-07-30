@@ -40,13 +40,39 @@ export async function getRestaurantById(): Promise<ActionResult> {
     }
 }
 
+async function findAdminUserByRestaurantId(restaurantId: string) {
+    try {
+        const { data, error } = await supabaseAdmin.auth.admin.listUsers();
+        if (error || !data?.users) return null;
+        return data.users.find((u: any) => u.user_metadata?.restaurant_id === restaurantId) || null;
+    } catch {
+        return null;
+    }
+}
+
 export async function createRestaurant(formData: {
     name: string;
-    description: string;
-    email: string;
-    phone: string;
-    country: string;
-    address: string;
+    tagline?: string;
+    description?: string;
+    email?: string;
+    phone?: string;
+    country?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    postal_code?: string;
+    cuisine_types?: string[];
+    is_pure_veg?: boolean;
+    has_parking?: boolean;
+    has_wifi?: boolean;
+    accepts_card?: boolean;
+    accepts_upi?: boolean;
+    accepts_cash?: boolean;
+    days_open?: string[];
+    opening_time?: string;
+    closing_time?: string;
+    latitude?: number;
+    longitude?: number;
 }): Promise<ActionResult> {
     try {
         const supabase = await createClient();
@@ -62,12 +88,9 @@ export async function createRestaurant(formData: {
             .from("restaurants")
             .insert({
                 owner_id: user.id,
-                name: formData.name,
-                description: formData.description,
-                email: formData.email,
-                phone: formData.phone,
-                country: formData.country,
-                address: formData.address,
+                ...formData,
+                latitude: formData.latitude || 19.076, // fallback Mumbai lat
+                longitude: formData.longitude || 72.877, // fallback Mumbai lon
             })
             .select()
             .single();
@@ -76,44 +99,44 @@ export async function createRestaurant(formData: {
             return { success: false, error: error.message };
         }
 
-        // Generate a random password for the restaurant admin account
-        const password = generatePassword();
+        // Only create admin account if email is provided
+        if (formData.email && formData.email.trim() !== "") {
+            const password = generatePassword();
+            const { data: adminUser, error: adminError } =
+                await supabaseAdmin.auth.admin.createUser({
+                    email: formData.email,
+                    password,
+                    email_confirm: true,
+                    user_metadata: {
+                        role: "restaurant_admin",
+                        restaurant_id: (data as any).id,
+                        restaurant_name: formData.name,
+                    },
+                });
 
-        // Create a Supabase auth user for the restaurant admin
-        const { data: adminUser, error: adminError } =
-            await supabaseAdmin.auth.admin.createUser({
-                email: formData.email,
-                password,
-                email_confirm: true,
-                user_metadata: {
-                    role: "restaurant_admin",
-                    restaurant_id: (data as any).id,
-                    restaurant_name: formData.name,
-                },
-            });
+            if (adminError) {
+                // Roll back restaurant row so state stays consistent
+                await supabaseAdmin
+                    .from("restaurants")
+                    .delete()
+                    .eq("id", (data as any).id);
+                return {
+                    success: false,
+                    error: `Failed to create admin account: ${adminError.message}`,
+                };
+            }
 
-        if (adminError) {
-            // Roll back restaurant row so state stays consistent
-            await supabaseAdmin
-                .from("restaurants")
-                .delete()
-                .eq("id", (data as any).id);
-            return {
-                success: false,
-                error: `Failed to create admin account: ${adminError.message}`,
-            };
-        }
-
-        // Send credentials email
-        console.log(`[Restaurant Admin] Email: ${formData.email} | Password: ${password}`);
-        try {
-            await sendRestaurantCredentials({
-                restaurantName: formData.name,
-                email: formData.email,
-                password,
-            });
-        } catch {
-            // Email failure is non-fatal — restaurant + user already created
+            // Send credentials email
+            console.log(`[Restaurant Admin] Email: ${formData.email} | Password: ${password}`);
+            try {
+                await sendRestaurantCredentials({
+                    restaurantName: formData.name,
+                    email: formData.email,
+                    password,
+                });
+            } catch {
+                // Email failure is non-fatal
+            }
         }
 
         return { success: true, data };
@@ -129,11 +152,27 @@ export async function updateRestaurant(
     restaurantId: string,
     formData: {
         name: string;
-        description: string;
-        email: string;
-        phone: string;
-        country: string;
-        address: string;
+        tagline?: string;
+        description?: string;
+        email?: string;
+        phone?: string;
+        country?: string;
+        address?: string;
+        city?: string;
+        state?: string;
+        postal_code?: string;
+        cuisine_types?: string[];
+        is_pure_veg?: boolean;
+        has_parking?: boolean;
+        has_wifi?: boolean;
+        accepts_card?: boolean;
+        accepts_upi?: boolean;
+        accepts_cash?: boolean;
+        days_open?: string[];
+        opening_time?: string;
+        closing_time?: string;
+        latitude?: number;
+        longitude?: number;
     }
 ): Promise<ActionResult> {
     try {
@@ -146,6 +185,14 @@ export async function updateRestaurant(
             return { success: false, error: "Not authenticated" };
         }
 
+        // Fetch current restaurant details before updating
+        const { data: currentRestaurant } = await supabase
+            .from("restaurants")
+            .select("email, name")
+            .eq("id", restaurantId)
+            .single();
+
+        // Update the restaurant details
         const { error } = await supabase
             .from("restaurants")
             .update({
@@ -157,6 +204,71 @@ export async function updateRestaurant(
 
         if (error) {
             return { success: false, error: error.message };
+        }
+
+        // Create or update the admin account in Supabase Auth
+        if (formData.email && formData.email.trim() !== "") {
+            const adminUser = await findAdminUserByRestaurantId(restaurantId);
+
+            if (adminUser) {
+                // Update existing admin user if email or restaurant name changed
+                const updates: any = {};
+                if (formData.email !== adminUser.email) {
+                    updates.email = formData.email;
+                }
+                if (formData.name && formData.name !== adminUser.user_metadata?.restaurant_name) {
+                    updates.user_metadata = {
+                        ...adminUser.user_metadata,
+                        restaurant_name: formData.name,
+                    };
+                }
+
+                if (Object.keys(updates).length > 0) {
+                    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+                        adminUser.id,
+                        updates
+                    );
+                    if (updateError) {
+                        return {
+                            success: false,
+                            error: `Failed to update admin account: ${updateError.message}`,
+                        };
+                    }
+                }
+            } else {
+                // Create admin user for the first time
+                const password = generatePassword();
+                const { data: newAdminUser, error: adminError } =
+                    await supabaseAdmin.auth.admin.createUser({
+                        email: formData.email,
+                        password,
+                        email_confirm: true,
+                        user_metadata: {
+                            role: "restaurant_admin",
+                            restaurant_id: restaurantId,
+                            restaurant_name: formData.name || currentRestaurant?.name || "",
+                        },
+                    });
+
+                if (adminError) {
+                    return {
+                        success: false,
+                        error: `Failed to create admin account: ${adminError.message}`,
+                    };
+                }
+
+                // Send credentials email
+                console.log(`[Restaurant Admin] Email: ${formData.email} | Password: ${password}`);
+                try {
+                    await sendRestaurantCredentials({
+                        restaurantName: formData.name || currentRestaurant?.name || "",
+                        email: formData.email,
+                        password,
+                    });
+                } catch {
+                    // Email failure is non-fatal
+                }
+            }
         }
 
         return { success: true };
@@ -458,9 +570,7 @@ export async function removeImageFromRestaurant(
 
 export async function getAllRestaurants(): Promise<ActionResult> {
     try {
-        const supabase = await createClient();
-
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
             .from("restaurants")
             .select("*");
 
@@ -479,9 +589,7 @@ export async function getAllRestaurants(): Promise<ActionResult> {
 
 export async function getRestaurantByIdPublic(id: string): Promise<ActionResult> {
     try {
-        const supabase = await createClient();
-
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
             .from("restaurants")
             .select("*")
             .eq("id", id)
@@ -605,6 +713,8 @@ export async function updateRestaurantSettings(
         is_open: boolean;
         min_order_value: number;
         delivery_charge: number;
+        latitude?: number;
+        longitude?: number;
     }
 ): Promise<ActionResult> {
     try {
@@ -627,6 +737,8 @@ export async function updateRestaurantSettings(
                 is_open: settings.is_open,
                 min_order_value: settings.min_order_value,
                 delivery_charge: settings.delivery_charge,
+                latitude: settings.latitude,
+                longitude: settings.longitude,
                 updated_at: new Date().toISOString(),
             })
             .eq("id", restaurantId);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Toaster, toast } from "sonner";
@@ -10,18 +10,17 @@ import {
   LogOut,
   Menu,
   PackageCheck,
-  Settings,
-  Sparkles,
   User,
-  Utensils,
   X,
+  Loader2,
 } from "lucide-react";
 import { logout } from "@/lib/supabase/auth.action";
+import { getProfile } from "@/lib/profile.action";
 
 const navItems = [
-  { label: "Overview", href: "/deliveryPartner/dashboard", icon: LayoutDashboard },
-  { label: "Orders", href: "/deliveryPartner/orders", icon: PackageCheck },
-  { label: "Profile", href: "/deliveryPartner/profile", icon: User },
+  { label: "Overview", href: "/delivery-partner/dashboard", icon: LayoutDashboard },
+  { label: "Orders", href: "/delivery-partner/orders", icon: PackageCheck },
+  { label: "Profile", href: "/delivery-partner/profile", icon: User },
 ];
 
 export default function DeliveryPartnerLayout({
@@ -32,6 +31,34 @@ export default function DeliveryPartnerLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    async function checkAuth() {
+      // Do not redirect on login & signup routes
+      if (
+        pathname === "/delivery-partner/login" ||
+        pathname === "/delivery-partner/signup"
+      ) {
+        setAuthorized(true);
+        return;
+      }
+
+      const res = await getProfile();
+      if (res.success && res.data) {
+        const userRole = (res.data as any).role;
+        if (userRole === "delivery_partner") {
+          setAuthorized(true);
+        } else {
+          toast.error("Access Denied: Please log in with a rider account.");
+          router.push("/delivery-partner/login");
+        }
+      } else {
+        router.push("/delivery-partner/login");
+      }
+    }
+    checkAuth();
+  }, [pathname, router]);
 
   const handleLogout = async () => {
     const res = await logout();
@@ -39,18 +66,44 @@ export default function DeliveryPartnerLayout({
       toast.error(res.error);
     } else {
       toast.success("Logged out");
-      router.push("/login");
+      router.push("/delivery-partner/login");
     }
   };
 
+  // Prevent flash of page content during checks
+  const isAuthPage =
+    pathname === "/delivery-partner/login" ||
+    pathname === "/delivery-partner/signup";
+
+  if (authorized === null && !isAuthPage) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-stone-50 text-stone-700">
+        <div className="text-center">
+          <Loader2 className="animate-spin text-orange-600 mb-2 mx-auto" size={32} />
+          <p className="text-xs text-stone-500 font-bold">Verifying rider credentials...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Render auth pages directly (without sidebar shell)
+  if (isAuthPage) {
+    return (
+      <>
+        {children}
+        <Toaster position="top-right" />
+      </>
+    );
+  }
+
   return (
-    <div className="portal-shell min-h-screen text-stone-950">
+    <div className="portal-shell min-h-screen text-stone-955 bg-gradient-to-br from-orange-50/50 via-white to-orange-50/50">
       <div className="portal-aurora portal-aurora-one" />
       <div className="portal-aurora portal-aurora-two" />
 
       <div className="relative mx-auto flex min-h-screen w-full max-w-[1500px] gap-0 p-3 sm:p-5 lg:gap-4">
         {/* ── Desktop Sidebar ── */}
-        <aside className="portal-glass sticky top-5 hidden h-[calc(100vh-2.5rem)] w-[230px] shrink-0 flex-col rounded-[24px] border border-white/70 p-4 shadow-xl shadow-stone-900/10 lg:flex">
+        <aside className="portal-glass sticky top-5 hidden h-[calc(100vh-2.5rem)] w-[230px] shrink-0 flex-col rounded-[24px] border border-white/70 p-4 bg-white/80 backdrop-blur-xl shadow-xl shadow-stone-900/5 lg:flex">
           <Link href="/" className="mb-6 flex items-center gap-3 px-2">
             <span className="grid h-10 w-10 place-items-center rounded-xl bg-orange-600 text-white shadow-lg shadow-orange-500/20">
               <ChefHat size={20} />
@@ -75,7 +128,7 @@ export default function DeliveryPartnerLayout({
                   className={`flex h-10 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold transition ${
                     active
                       ? "bg-orange-600 text-white shadow-lg shadow-orange-500/20"
-                      : "text-stone-600 hover:bg-white/80 hover:text-stone-950"
+                      : "text-stone-600 hover:bg-stone-50 hover:text-stone-950"
                   }`}
                 >
                   <item.icon size={17} />

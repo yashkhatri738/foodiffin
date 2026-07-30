@@ -1,0 +1,23 @@
+{
+  "authenticatedUser": {
+    "id": "66272c18-7737-4b48-bcc4-b217878cb529",
+    "email": "yashkhatri378=1@gmail.com"
+  },
+  "ordersWithRls": {
+    "success": true,
+    "error": null,
+    "data": [],
+    "count": null,
+    "status": 200,
+    "statusText": "OK"
+  },
+  "ordersWithAdmin": {
+    "success": true,
+    "error": null,
+    "data": [],
+    "count": null,
+    "status": 200,
+    "statusText": "OK"
+  },
+  "error": null
+}

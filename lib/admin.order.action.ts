@@ -34,7 +34,7 @@ export async function getAllOrdersForAdmin() {
         .from('orders')
         .select(`
             *,
-            profiles (
+            profiles!user_id (
                 full_name,
                 phone
             ),

@@ -6,23 +6,32 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default function LoginPage() {
-  const { register, handleSubmit, formState } = useForm<{
+  const { register, handleSubmit } = useForm<{
     email: string;
     password: string;
   }>();
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const onSubmit = async (data: { email: string; password: string }) => {
+    if (!data.email || !data.password) {
+      toast.error("Please fill in both email and password.");
+      return;
+    }
+
+    setLoading(true);
     try {
       const result = await login(data.email, data.password);
       if (!result.success) {
-        toast("Wrong email or password");
+        toast.error(result.error || "Incorrect email or password. Please try again.");
       } else {
+        toast.success("Login successful! Redirecting...");
         const role = (result.data as any)?.role;
         if (role === "restaurant_admin") {
           router.push("/admin/dashboard");
@@ -30,8 +39,11 @@ export default function LoginPage() {
           router.push("/");
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login failed:", error);
+      toast.error(error?.message || "An error occurred while signing in.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -57,7 +69,7 @@ export default function LoginPage() {
             Sign In
           </h1>
 
-          <div className="flex gap-3 mb-3">
+          <div className="flex gap-3 mb-4">
             <SocialBtn title="Google">
               <svg width="18" height="18" viewBox="0 0 24 24">
                 <path
@@ -111,7 +123,7 @@ export default function LoginPage() {
             </SocialBtn>
           </div>
 
-          <div className="flex items-center gap-2.5 w-full my-4.5">
+          <div className="flex items-center gap-3 w-full my-5">
             <span className="flex-1 h-px bg-gray-300" />
             <span className="font-poppins text-xs text-gray-400 whitespace-nowrap">
               Or use your email password
@@ -119,12 +131,12 @@ export default function LoginPage() {
             <span className="flex-1 h-px bg-gray-300" />
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="w-full">
-            <div className="w-full mb-3">
+          <form onSubmit={handleSubmit(onSubmit)} className="w-full flex flex-col">
+            <div className="w-full mb-4">
               <input
                 {...register("email")}
                 name="email"
-                className="w-full px-4.5 py-3 border border-gray-200 rounded-lg font-poppins text-sm text-gray-700 outline-none bg-gray-50 focus:border-orange-600 focus:bg-white focus:shadow-sm focus:ring-2 focus:ring-orange-100 placeholder-gray-400 transition-all"
+                className="w-full px-5 py-3 border border-gray-200 rounded-lg font-poppins text-sm text-gray-700 outline-none bg-gray-50 focus:border-orange-600 focus:bg-white focus:shadow-sm focus:ring-2 focus:ring-orange-100 placeholder-gray-400 transition-all"
                 type="email"
                 placeholder="Email"
               />
@@ -133,7 +145,7 @@ export default function LoginPage() {
               <input
                 {...register("password")}
                 name="password"
-                className="w-full px-4.5 py-3 pr-10 border border-gray-200 rounded-lg font-poppins text-sm text-gray-700 outline-none bg-gray-50 focus:border-orange-600 focus:bg-white focus:shadow-sm focus:ring-2 focus:ring-orange-100 placeholder-gray-400 transition-all"
+                className="w-full px-5 py-3 pr-10 border border-gray-200 rounded-lg font-poppins text-sm text-gray-700 outline-none bg-gray-50 focus:border-orange-600 focus:bg-white focus:shadow-sm focus:ring-2 focus:ring-orange-100 placeholder-gray-400 transition-all"
                 type={showPassword ? "text" : "password"}
                 placeholder="Password"
               />
@@ -141,7 +153,7 @@ export default function LoginPage() {
                 type="button"
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 onClick={() => setShowPassword((s) => !s)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-orange-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-orange-600"
               >
                 {showPassword ? (
                   <svg
@@ -171,7 +183,7 @@ export default function LoginPage() {
                     strokeLinejoin="round"
                   >
                     <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-4.97 0-9.27-3-11-8 1.04-2.64 2.8-4.8 4.94-6.06" />
-                    <path d="M1 1l22 22" />
+                    <path d="M1.1 1.1l22 22" />
                     <path d="M9.88 9.88A3 3 0 0 0 14.12 14.12" />
                   </svg>
                 )}
@@ -180,17 +192,25 @@ export default function LoginPage() {
 
             <Link
               href="/forgot-password"
-              className="font-poppins text-xs text-gray-400 no-underline self-end mb-5 hover:text-orange-600 transition-colors"
+              className="font-poppins text-xs text-gray-400 no-underline self-end mb-6 hover:text-orange-600 transition-colors"
             >
               Forgot Your Password?
             </Link>
 
             <button
               type="submit"
-              className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-none rounded-full px-11 py-3 font-poppins font-semibold text-sm tracking-wider cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-lg"
+              disabled={loading}
+              className="w-fit mx-auto bg-gradient-to-br from-orange-500 to-orange-600 text-white border-none rounded-full px-11 py-3 font-poppins font-semibold text-sm tracking-wider cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-lg flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
               style={{ boxShadow: "0 6px 22px rgba(255,96,0,.35)" }}
             >
-              SIGN IN
+              {loading ? (
+                <>
+                  <Loader2 className="animate-spin" size={18} />
+                  SIGNING IN...
+                </>
+              ) : (
+                "SIGN IN"
+              )}
             </button>
           </form>
         </div>
@@ -207,7 +227,7 @@ export default function LoginPage() {
             Register with your personal details to use all of site features
           </p>
           <Link href="/signup" className="relative z-10">
-            <button className="bg-transparent text-white border-2 border-white/75 rounded-full px-10 py-2.75 font-poppins font-semibold text-sm tracking-wider cursor-pointer transition-all hover:bg-white/15 hover:-translate-y-0.5">
+            <button className="bg-transparent text-white border-2 border-white/75 rounded-full px-10 py-3 font-poppins font-semibold text-sm tracking-wider cursor-pointer transition-all hover:bg-white/15 hover:-translate-y-0.5">
               SIGN UP
             </button>
           </Link>

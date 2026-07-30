@@ -79,7 +79,7 @@ export default async function DashboardPage() {
       created_at,
       total_amount,
       status,
-      profiles (
+      profiles!user_id (
         full_name
       ),
       order_items (

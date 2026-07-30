@@ -118,6 +118,23 @@ export default function OnboardingPage() {
   const [images, setImages] = useState<string[]>([]);
   const [isEdit, setIsEdit] = useState(false);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+  const [coords, setCoords] = useState<{ latitude?: number; longitude?: number }>({});
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setCoords({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          });
+        },
+        () => {
+          setCoords({ latitude: 19.076, longitude: 72.877 });
+        }
+      );
+    }
+  }, []);
 
   // Form states
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
@@ -187,6 +204,13 @@ export default function OnboardingPage() {
     setSaving(true);
     const data = getValues();
 
+    const openDays = Object.entries(operatingHours)
+      .filter(([_, info]) => !info.closed)
+      .map(([day, _]) => day.toLowerCase());
+    const firstOpenDay = Object.entries(operatingHours).find(([_, info]) => !info.closed);
+    const openingTime = firstOpenDay ? `${firstOpenDay[1].open}:00` : "09:00:00";
+    const closingTime = firstOpenDay ? `${firstOpenDay[1].close}:00` : "22:00:00";
+
     const restaurantData = {
       name: data.name,
       tagline: data.tagline,
@@ -197,15 +221,19 @@ export default function OnboardingPage() {
       address: data.address,
       city: data.city,
       state: data.state,
-      pincode: data.pincode,
+      postal_code: data.pincode, // mapped to postal_code
       cuisine_types: selectedCuisines,
-      pure_veg: features.pure_veg,
+      is_pure_veg: features.pure_veg, // mapped to is_pure_veg
       has_parking: features.has_parking,
       has_wifi: features.has_wifi,
       accepts_card: payments.accepts_card,
       accepts_upi: payments.accepts_upi,
       accepts_cash: payments.accepts_cash,
-      operating_hours: operatingHours,
+      days_open: openDays,
+      opening_time: openingTime,
+      closing_time: closingTime,
+      latitude: coords.latitude || 19.076,
+      longitude: coords.longitude || 72.877,
     };
 
     try {
@@ -243,9 +271,32 @@ export default function OnboardingPage() {
     // Validate current step
     let valid = true;
     if (currentStep === 1) {
-      valid = await trigger(["name"]);
+      valid = await trigger(["name", "description"]);
       if (!valid) {
-        toast.error("Please fill in the restaurant name");
+        toast.error("Please fill in all required basic details");
+        return;
+      }
+      if (selectedCuisines.length === 0) {
+        toast.error("Please select at least one cuisine type");
+        return;
+      }
+    } else if (currentStep === 2) {
+      valid = await trigger(["address", "city", "state", "pincode", "country"]);
+      if (!valid) {
+        toast.error("Please fill in all location details");
+        return;
+      }
+    } else if (currentStep === 3) {
+      valid = await trigger(["phone", "email"]);
+      if (!valid) {
+        toast.error("Please fill in all contact details");
+        return;
+      }
+      // Simple email validation pattern check
+      const emailVal = getValues("email");
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(emailVal)) {
+        toast.error("Please enter a valid email address");
         return;
       }
     }
@@ -461,14 +512,19 @@ export default function OnboardingPage() {
                 <div>
                   <label className="flex items-center gap-2 text-sm font-semibold text-stone-700 mb-2">
                     <FileText size={14} />
-                    Description
+                    Description *
                   </label>
                   <textarea
                     rows={4}
                     placeholder="Tell customers about your restaurant, cuisine specialties, and what makes you unique..."
-                    className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition resize-none"
-                    {...register("description")}
+                    className={`w-full px-4 py-3 rounded-xl border ${errors.description ? "border-red-400 focus:border-red-500 focus:ring-red-500/20" : "border-stone-200 focus:border-orange-500 focus:ring-orange-500/20"} focus:ring-2 outline-none transition resize-none`}
+                    {...register("description", { required: true })}
                   />
+                  {errors.description && (
+                    <p className="text-red-500 text-xs mt-1">
+                      Description is required
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -518,65 +574,90 @@ export default function OnboardingPage() {
                 <div>
                   <label className="flex items-center gap-2 text-sm font-semibold text-stone-700 mb-2">
                     <MapPin size={14} />
-                    Full Address
+                    Full Address *
                   </label>
                   <input
                     type="text"
                     placeholder="Shop No, Building Name, Street"
-                    className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition"
-                    {...register("address")}
+                    className={`w-full px-4 py-3 rounded-xl border ${errors.address ? "border-red-400 focus:border-red-500 focus:ring-red-500/20" : "border-stone-200 focus:border-orange-500 focus:ring-orange-500/20"} focus:ring-2 outline-none transition`}
+                    {...register("address", { required: true })}
                   />
+                  {errors.address && (
+                    <p className="text-red-500 text-xs mt-1">
+                      Address is required
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-5">
                   <div>
                     <label className="flex items-center gap-2 text-sm font-semibold text-stone-700 mb-2">
                       <Building2 size={14} />
-                      City
+                      City *
                     </label>
                     <input
                       type="text"
                       placeholder="e.g. Mumbai"
-                      className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition"
-                      {...register("city")}
+                      className={`w-full px-4 py-3 rounded-xl border ${errors.city ? "border-red-400 focus:border-red-500 focus:ring-red-500/20" : "border-stone-200 focus:border-orange-500 focus:ring-orange-500/20"} focus:ring-2 outline-none transition`}
+                      {...register("city", { required: true })}
                     />
+                    {errors.city && (
+                      <p className="text-red-500 text-xs mt-1">
+                        City is required
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="flex items-center gap-2 text-sm font-semibold text-stone-700 mb-2">
-                      State
+                      State *
                     </label>
                     <input
                       type="text"
                       placeholder="e.g. Maharashtra"
-                      className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition"
-                      {...register("state")}
+                      className={`w-full px-4 py-3 rounded-xl border ${errors.state ? "border-red-400 focus:border-red-500 focus:ring-red-500/20" : "border-stone-200 focus:border-orange-500 focus:ring-orange-500/20"} focus:ring-2 outline-none transition`}
+                      {...register("state", { required: true })}
                     />
+                    {errors.state && (
+                      <p className="text-red-500 text-xs mt-1">
+                        State is required
+                      </p>
+                    )}
                   </div>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-5">
                   <div>
                     <label className="flex items-center gap-2 text-sm font-semibold text-stone-700 mb-2">
-                      PIN Code
+                      PIN Code *
                     </label>
                     <input
                       type="text"
                       placeholder="e.g. 400001"
-                      className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition"
-                      {...register("pincode")}
+                      className={`w-full px-4 py-3 rounded-xl border ${errors.pincode ? "border-red-400 focus:border-red-500 focus:ring-red-500/20" : "border-stone-200 focus:border-orange-500 focus:ring-orange-500/20"} focus:ring-2 outline-none transition`}
+                      {...register("pincode", { required: true })}
                     />
+                    {errors.pincode && (
+                      <p className="text-red-500 text-xs mt-1">
+                        PIN Code is required
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="flex items-center gap-2 text-sm font-semibold text-stone-700 mb-2">
                       <Globe size={14} />
-                      Country
+                      Country *
                     </label>
                     <input
                       type="text"
                       placeholder="India"
-                      className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition"
-                      {...register("country")}
+                      className={`w-full px-4 py-3 rounded-xl border ${errors.country ? "border-red-400 focus:border-red-500 focus:ring-red-500/20" : "border-stone-200 focus:border-orange-500 focus:ring-orange-500/20"} focus:ring-2 outline-none transition`}
+                      {...register("country", { required: true })}
                     />
+                    {errors.country && (
+                      <p className="text-red-500 text-xs mt-1">
+                        Country is required
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -605,26 +686,36 @@ export default function OnboardingPage() {
                   <div>
                     <label className="flex items-center gap-2 text-sm font-semibold text-stone-700 mb-2">
                       <Phone size={14} />
-                      Phone Number
+                      Phone Number *
                     </label>
                     <input
                       type="tel"
                       placeholder="+91 98765 43210"
-                      className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition"
-                      {...register("phone")}
+                      className={`w-full px-4 py-3 rounded-xl border ${errors.phone ? "border-red-400 focus:border-red-500 focus:ring-red-500/20" : "border-stone-200 focus:border-orange-500 focus:ring-orange-500/20"} focus:ring-2 outline-none transition`}
+                      {...register("phone", { required: true })}
                     />
+                    {errors.phone && (
+                      <p className="text-red-500 text-xs mt-1">
+                        Phone number is required
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="flex items-center gap-2 text-sm font-semibold text-stone-700 mb-2">
                       <Mail size={14} />
-                      Email
+                      Email *
                     </label>
                     <input
                       type="email"
                       placeholder="restaurant@example.com"
-                      className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition"
-                      {...register("email")}
+                      className={`w-full px-4 py-3 rounded-xl border ${errors.email ? "border-red-400 focus:border-red-500 focus:ring-red-500/20" : "border-stone-200 focus:border-orange-500 focus:ring-orange-500/20"} focus:ring-2 outline-none transition`}
+                      {...register("email", { required: true })}
                     />
+                    {errors.email && (
+                      <p className="text-red-500 text-xs mt-1">
+                        Email is required
+                      </p>
+                    )}
                   </div>
                 </div>
 

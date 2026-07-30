@@ -28,6 +28,20 @@ export interface CreateOrderData {
     items: OrderItem[];
 }
 
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371; // Earth radius in km
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos((lat1 * Math.PI) / 180) *
+            Math.cos((lat2 * Math.PI) / 180) *
+            Math.sin(dLon / 2) *
+            Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // returns distance in km
+}
+
 export async function createOrder(orderData: CreateOrderData) {
     const supabase = await createClient();
 
@@ -37,6 +51,39 @@ export async function createOrder(orderData: CreateOrderData) {
     }
 
     try {
+        // Fetch restaurant latitude/longitude for distance metrics
+        const { data: restaurant } = await supabase
+            .from("restaurants")
+            .select("latitude, longitude")
+            .eq("id", orderData.restaurant_id)
+            .maybeSingle();
+
+        // Calculate distance
+        let distanceKm = 3.5; // fallback default
+        const custLat = (orderData.address as any).latitude;
+        const custLon = (orderData.address as any).longitude;
+        const restLat = restaurant?.latitude;
+        const restLon = restaurant?.longitude;
+
+        if (custLat && custLon && restLat && restLon) {
+            distanceKm = calculateDistance(
+                parseFloat(custLat),
+                parseFloat(custLon),
+                parseFloat(restLat),
+                parseFloat(restLon)
+            );
+        }
+
+        // Distance payout logic: Base ₹30 for first 2 km, then ₹10 per additional km
+        let deliveryCostShare = 30;
+        if (distanceKm > 2) {
+            deliveryCostShare += Math.round((distanceKm - 2) * 10);
+        }
+
+        const platformCommPct = 15.0; // 15% Platform cut
+        const platformCommAmount = Math.round((orderData.total_amount * platformCommPct) / 100);
+        const netPayoutAmount = orderData.total_amount - platformCommAmount - deliveryCostShare;
+
         // Create the order
         const { data: order, error: orderError } = await supabase
             .from('orders')
@@ -45,9 +92,14 @@ export async function createOrder(orderData: CreateOrderData) {
                 restaurant_id: orderData.restaurant_id,
                 total_amount: orderData.total_amount,
                 payment_method: orderData.payment_method,
-                payment_status: orderData.payment_method === 'cash' ? 'pending' : 'pending',
+                payment_status: 'pending',
                 address: orderData.address,
                 status: 'pending',
+                platform_commission_pct: platformCommPct,
+                platform_commission_amount: platformCommAmount,
+                delivery_cost_share: deliveryCostShare,
+                net_payout_amount: netPayoutAmount,
+                payout_status: 'pending'
             })
             .select()
             .single();
@@ -96,6 +148,10 @@ export async function getUserOrders() {
       restaurants (
         id,
         name
+      ),
+      delivery_partner:profiles!delivery_partner_id (
+        full_name,
+        phone
       ),
       order_items (
         *,

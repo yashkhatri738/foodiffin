@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { getUserOrders } from "@/lib/order.action";
+import { createClient } from "@/lib/supabase/client";
 import {
   ArrowLeft,
   Package,
@@ -57,6 +58,10 @@ interface Order {
     name: string;
     id: string;
   };
+  delivery_partner?: {
+    full_name: string;
+    phone: string;
+  } | null;
 }
 
 const statusConfig = {
@@ -109,6 +114,32 @@ export default function OrdersPage() {
 
   useEffect(() => {
     loadOrders();
+
+    // Supabase realtime subscription
+    const clientSupabase = createClient();
+    const channel = clientSupabase
+      .channel("live-orders-channel")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "orders",
+        },
+        (payload) => {
+          // Trigger a silent database fetch update to maintain clean joined parameters
+          getUserOrders().then((result) => {
+            if (result.data) {
+              setOrders(result.data as Order[]);
+            }
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      clientSupabase.removeChannel(channel);
+    };
   }, []);
 
   const loadOrders = async () => {
@@ -373,6 +404,27 @@ export default function OrdersPage() {
                             ₹{order.total_amount.toFixed(2)}
                           </p>
                         </div>
+
+                        {/* Delivery Rider Details */}
+                        {order.delivery_partner && (
+                          <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
+                            <div className="flex items-center gap-2 text-xs text-emerald-800 font-bold mb-2">
+                              <Truck className="w-4 h-4 animate-bounce" />
+                              Delivery Agent Assigned
+                            </div>
+                            <p className="font-bold text-gray-900 text-sm">
+                              {order.delivery_partner.full_name}
+                            </p>
+                            {order.delivery_partner.phone && (
+                              <a
+                                href={`tel:${order.delivery_partner.phone}`}
+                                className="inline-flex items-center gap-1.5 mt-2.5 text-xs font-bold text-emerald-700 bg-emerald-100/60 hover:bg-emerald-100/80 px-3 py-1.5 rounded-lg transition-colors"
+                              >
+                                📞 Call Rider ({order.delivery_partner.phone})
+                              </a>
+                            )}
+                          </div>
+                        )}
 
                         {/* Payment Method */}
                         <div className="bg-gray-50 rounded-xl p-4">

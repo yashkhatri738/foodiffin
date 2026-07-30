@@ -15,6 +15,7 @@ import {
   X,
   Calendar,
   ArrowLeftRight,
+  DollarSign,
 } from "lucide-react";
 
 const navItems = [
@@ -22,6 +23,7 @@ const navItems = [
   { label: "Dishes", href: "/admin/dishes", icon: Utensils },
   { label: "Tiffin Plans", href: "/admin/subscriptions", icon: Calendar },
   { label: "Orders", href: "/admin/orders", icon: PackageCheck },
+  { label: "Finance", href: "/admin/finance", icon: DollarSign },
   { label: "Settings", href: "/admin/settings", icon: Settings },
   { label: "Profile", href: "/admin/profile", icon: User },
 ];
