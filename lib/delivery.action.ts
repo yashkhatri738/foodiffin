@@ -268,3 +268,40 @@ export async function getDeliveryPartnerHistory(): Promise<{
     };
   }
 }
+
+// Update rider live tracking coordinates
+export async function updateRiderLiveLocation(
+  latitude: number,
+  longitude: number
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        live_latitude: latitude,
+        live_longitude: longitude,
+        last_location_update: new Date().toISOString(),
+      })
+      .eq("id", user.id);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message ?? "Failed to update live coordinates",
+    };
+  }
+}

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Toaster, toast } from "sonner";
+import { toast } from "sonner";
 import {
   ChefHat,
   LayoutDashboard,
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { logout } from "@/lib/supabase/auth.action";
 import { getProfile } from "@/lib/profile.action";
+import { updateRiderLiveLocation } from "@/lib/delivery.action";
 
 const navItems = [
   { label: "Overview", href: "/delivery-partner/dashboard", icon: LayoutDashboard },
@@ -32,6 +33,7 @@ export default function DeliveryPartnerLayout({
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [authorized, setAuthorized] = useState<boolean | null>(null);
+  const [profile, setProfile] = useState<any | null>(null);
 
   useEffect(() => {
     async function checkAuth() {
@@ -48,6 +50,7 @@ export default function DeliveryPartnerLayout({
       if (res.success && res.data) {
         const userRole = (res.data as any).role;
         if (userRole === "delivery_partner") {
+          setProfile(res.data);
           setAuthorized(true);
         } else {
           toast.error("Access Denied: Please log in with a rider account.");
@@ -59,6 +62,31 @@ export default function DeliveryPartnerLayout({
     }
     checkAuth();
   }, [pathname, router]);
+
+  // Real-time tracking loop
+  useEffect(() => {
+    if (!authorized || !profile || !profile.is_online) return;
+
+    if (typeof window !== "undefined" && navigator.geolocation) {
+      const watchId = navigator.geolocation.watchPosition(
+        async (position) => {
+          await updateRiderLiveLocation(position.coords.latitude, position.coords.longitude);
+        },
+        (error) => {
+          console.error("GPS tracking watch error:", error);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        }
+      );
+
+      return () => {
+        navigator.geolocation.clearWatch(watchId);
+      };
+    }
+  }, [authorized, profile]);
 
   const handleLogout = async () => {
     const res = await logout();
@@ -88,12 +116,7 @@ export default function DeliveryPartnerLayout({
 
   // Render auth pages directly (without sidebar shell)
   if (isAuthPage) {
-    return (
-      <>
-        {children}
-        <Toaster position="top-right" />
-      </>
-    );
+    return <>{children}</>;
   }
 
   return (
@@ -211,8 +234,6 @@ export default function DeliveryPartnerLayout({
         {/* ── Main Content ── */}
         <main className="min-w-0 flex-1 pt-16 lg:pt-0">{children}</main>
       </div>
-
-      <Toaster position="top-right" />
     </div>
   );
 }

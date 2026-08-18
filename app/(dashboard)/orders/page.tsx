@@ -25,6 +25,12 @@ import {
   ZoomIn,
 } from "lucide-react";
 import { toast } from "sonner";
+import dynamic from "next/dynamic";
+
+const OrderTrackingMap = dynamic(
+  () => import("@/components/OrderTrackingMap"),
+  { ssr: false }
+);
 
 interface DishData {
   name: string;
@@ -52,15 +58,22 @@ interface Order {
     city: string;
     state: string;
     postal_code: string;
+    latitude?: number;
+    longitude?: number;
   };
   order_items: OrderItem[];
   restaurants?: {
-    name: string;
     id: string;
+    name: string;
+    latitude?: number;
+    longitude?: number;
   };
   delivery_partner?: {
+    id: string;
     full_name: string;
     phone: string;
+    live_latitude?: number | null;
+    live_longitude?: number | null;
   } | null;
 }
 
@@ -105,6 +118,77 @@ const statusConfig = {
 
 // Status flow order for timeline
 const statusFlow = ["pending", "confirmed", "packed", "out_for_delivery", "delivered"];
+
+function ActiveOrderTracker({ order }: { order: Order }) {
+  const [riderCoords, setRiderCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    if (order.delivery_partner) {
+      if (order.delivery_partner.live_latitude && order.delivery_partner.live_longitude) {
+        setRiderCoords({
+          lat: Number(order.delivery_partner.live_latitude),
+          lng: Number(order.delivery_partner.live_longitude),
+        });
+      }
+
+      const clientSupabase = createClient();
+      const channel = clientSupabase
+        .channel(`rider-live-${order.delivery_partner.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "profiles",
+            filter: `id=eq.${order.delivery_partner.id}`,
+          },
+          (payload) => {
+            const data = payload.new;
+            if (data.live_latitude && data.live_longitude) {
+              setRiderCoords({
+                lat: Number(data.live_latitude),
+                lng: Number(data.live_longitude),
+              });
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        clientSupabase.removeChannel(channel);
+      };
+    }
+  }, [order.delivery_partner]);
+
+  const customerLat = Number(order.address.latitude);
+  const customerLng = Number(order.address.longitude);
+  const kitchenLat = Number(order.restaurants?.latitude);
+  const kitchenLng = Number(order.restaurants?.longitude);
+
+  if (isNaN(customerLat) || isNaN(customerLng) || isNaN(kitchenLat) || isNaN(kitchenLng)) {
+    return (
+      <div className="p-3 bg-stone-50 border border-stone-200/60 rounded-xl text-[10px] text-stone-500 font-semibold text-center leading-normal">
+        📍 Coordinates not captured yet. Set custom locations during onboarding/checkout to enable Live Map tracking.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2 mt-4 pt-3 border-t border-stone-100">
+      <div className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">Live Courier tracking map</div>
+      <OrderTrackingMap
+        customerLat={customerLat}
+        customerLng={customerLng}
+        kitchenLat={kitchenLat}
+        kitchenLng={kitchenLng}
+        riderLat={riderCoords?.lat}
+        riderLng={riderCoords?.lng}
+        riderName={order.delivery_partner?.full_name}
+        kitchenName={order.restaurants?.name}
+      />
+    </div>
+  );
+}
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -407,22 +491,25 @@ export default function OrdersPage() {
 
                         {/* Delivery Rider Details */}
                         {order.delivery_partner && (
-                          <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
-                            <div className="flex items-center gap-2 text-xs text-emerald-800 font-bold mb-2">
-                              <Truck className="w-4 h-4 animate-bounce" />
-                              Delivery Agent Assigned
+                          <div className="space-y-4">
+                            <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
+                              <div className="flex items-center gap-2 text-xs text-emerald-800 font-bold mb-2">
+                                <Truck className="w-4 h-4 animate-bounce" />
+                                Delivery Agent Assigned
+                              </div>
+                              <p className="font-bold text-gray-900 text-sm">
+                                {order.delivery_partner.full_name}
+                              </p>
+                              {order.delivery_partner.phone && (
+                                <a
+                                  href={`tel:${order.delivery_partner.phone}`}
+                                  className="inline-flex items-center gap-1.5 mt-2.5 text-xs font-bold text-emerald-700 bg-emerald-100/60 hover:bg-emerald-100/80 px-3 py-1.5 rounded-lg transition-colors"
+                                >
+                                  📞 Call Rider ({order.delivery_partner.phone})
+                                </a>
+                              )}
                             </div>
-                            <p className="font-bold text-gray-900 text-sm">
-                              {order.delivery_partner.full_name}
-                            </p>
-                            {order.delivery_partner.phone && (
-                              <a
-                                href={`tel:${order.delivery_partner.phone}`}
-                                className="inline-flex items-center gap-1.5 mt-2.5 text-xs font-bold text-emerald-700 bg-emerald-100/60 hover:bg-emerald-100/80 px-3 py-1.5 rounded-lg transition-colors"
-                              >
-                                📞 Call Rider ({order.delivery_partner.phone})
-                              </a>
-                            )}
+                            <ActiveOrderTracker order={order} />
                           </div>
                         )}
 

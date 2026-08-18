@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Toaster, toast } from "sonner";
+import { toast } from "sonner";
 import {
   ChefHat,
   LayoutDashboard,
@@ -150,8 +150,6 @@ export default function AdminLayoutClient({
         {/* ── Main Content ── */}
         <main className="min-w-0 flex-1 pt-16 lg:pt-0">{children}</main>
       </div>
-
-      <Toaster position="top-right" />
     </div>
   );
 }

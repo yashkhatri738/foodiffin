@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
+import NotificationListener from "@/components/NotificationListener";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -47,7 +48,8 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         {children}
-        <Toaster position="top-center" richColors />
+        <Toaster position="top-right" richColors />
+        <NotificationListener />
       </body>
     </html>
   );

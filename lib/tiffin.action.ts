@@ -346,3 +346,110 @@ export async function subscribeToTiffinPlan(
     };
   }
 }
+
+// Pause tiffin subscription and extend its end date
+export async function pauseTiffinSubscription(
+  subscriptionId: string,
+  startDateStr: string,
+  endDateStr: string
+): Promise<ActionResult> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    // 1. Record the pause details in subscription_pauses
+    const { error: pauseError } = await supabase
+      .from("subscription_pauses")
+      .insert({
+        subscription_id: subscriptionId,
+        pause_start_date: startDateStr,
+        pause_end_date: endDateStr,
+      });
+
+    if (pauseError) {
+      return { success: false, error: "Failed to record pause range: " + pauseError.message };
+    }
+
+    // 2. Fetch the subscription to extend end_date
+    const { data: sub, error: subFetchError } = await supabase
+      .from("tiffin_subscriptions")
+      .select("end_date")
+      .eq("id", subscriptionId)
+      .single();
+
+    if (subFetchError || !sub) {
+      return { success: false, error: "Subscription not found" };
+    }
+
+    // Calculate pause duration in days
+    const start = new Date(startDateStr);
+    const end = new Date(endDateStr);
+    const timeDiff = end.getTime() - start.getTime();
+    const pauseDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24)) + 1;
+
+    // Shift subscription end_date out by pauseDays
+    const newEnd = new Date(sub.end_date);
+    newEnd.setDate(newEnd.getDate() + pauseDays);
+
+    const { error: updateError } = await supabase
+      .from("tiffin_subscriptions")
+      .update({
+        end_date: newEnd.toISOString().split("T")[0],
+        status: "paused"
+      })
+      .eq("id", subscriptionId);
+
+    if (updateError) {
+      return { success: false, error: "Failed to extend subscription: " + updateError.message };
+    }
+
+    revalidatePath("/profile");
+    revalidatePath("/subscriptions");
+    return { success: true };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message ?? "Failed to pause subscription",
+    };
+  }
+}
+
+// Resume tiffin subscription manually (toggles status back to active)
+export async function resumeTiffinSubscription(
+  subscriptionId: string
+): Promise<ActionResult> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    const { error } = await supabase
+      .from("tiffin_subscriptions")
+      .update({ status: "active" })
+      .eq("id", subscriptionId);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath("/profile");
+    revalidatePath("/subscriptions");
+    return { success: true };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message ?? "Failed to resume subscription",
+    };
+  }
+}

@@ -10,6 +10,11 @@ import {
   Loader2,
   Navigation,
   RefreshCw,
+  Banknote,
+  AlertTriangle,
+  CheckCircle2,
+  X,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -30,6 +35,13 @@ export default function DeliveryOrdersPage() {
   const [historyOrders, setHistoryOrders] = useState<DeliveryOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Payment confirmation state for active orders (orderId -> boolean)
+  const [cashCollectedMap, setCashCollectedMap] = useState<Record<string, boolean>>({});
+  
+  // Modal for payment settlement confirmation
+  const [settlementModalOrder, setSettlementModalOrder] = useState<DeliveryOrder | null>(null);
+  const [modalConfirmed, setModalConfirmed] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -62,11 +74,30 @@ export default function DeliveryOrdersPage() {
     setActionLoading(null);
   };
 
-  const handleComplete = async (orderId: string) => {
+  const handleOpenSettlementModal = (order: DeliveryOrder) => {
+    setSettlementModalOrder(order);
+    setModalConfirmed(order.payment_method !== "cash" || !!cashCollectedMap[order.id]);
+  };
+
+  const handleConfirmAndComplete = async () => {
+    if (!settlementModalOrder) return;
+    
+    if (settlementModalOrder.payment_method === "cash" && !modalConfirmed) {
+      toast.error("Please confirm that cash payment has been collected!");
+      return;
+    }
+
+    const orderId = settlementModalOrder.id;
     setActionLoading(orderId);
     const res = await completeDeliveryOrder(orderId);
     if (res.success) {
-      toast.success("Order delivered successfully!");
+      toast.success(`Payment settled & Order #FD-${orderId.slice(0, 6).toUpperCase()} marked as Delivered!`);
+      setSettlementModalOrder(null);
+      setCashCollectedMap((prev) => {
+        const next = { ...prev };
+        delete next[orderId];
+        return next;
+      });
       setTab("history");
     } else {
       toast.error(res.error || "Failed to complete delivery.");
@@ -94,44 +125,52 @@ export default function DeliveryOrdersPage() {
             Courier delivery tasks
           </h1>
           <p className="mt-1.5 max-w-xl text-sm leading-6 text-stone-600">
-            Accept open kitchen orders, track navigation paths, collect cash payments, and manage earnings payouts.
+            Accept open kitchen orders, collect payments safely, and complete deliveries.
           </p>
         </div>
 
-        <button
-          onClick={loadData}
-          className="inline-flex h-10 w-10 place-items-center rounded-xl bg-white/80 text-stone-700 border border-stone-200 transition hover:bg-stone-100 hover:-translate-y-0.5 justify-center items-center"
-        >
-          <RefreshCw size={16} />
-        </button>
-      </header>
-
-      {/* Tabs */}
-      <div className="flex border-b border-stone-200 gap-4">
-        {[
-          { id: "open", label: "Open Orders" },
-          { id: "active", label: "Active Delivery" },
-          { id: "history", label: "History Log" },
-        ].map((item) => (
+        {/* Tab selection */}
+        <div className="flex bg-stone-100 p-1 rounded-xl shrink-0 self-start md:self-auto">
           <button
-            key={item.id}
-            onClick={() => setTab(item.id as TabType)}
-            className={`pb-3.5 px-4 text-xs font-bold uppercase tracking-wider transition border-b-2 -mb-[2px] ${
-              tab === item.id
-                ? "border-orange-500 text-orange-600"
-                : "border-transparent text-stone-500 hover:text-stone-850"
+            onClick={() => setTab("open")}
+            className={`px-3 py-2 rounded-lg text-xs font-bold transition ${
+              tab === "open"
+                ? "bg-white text-stone-900 shadow-sm"
+                : "text-stone-500 hover:text-stone-900"
             }`}
           >
-            {item.label}
+            Open Tasks ({openOrders.length})
           </button>
-        ))}
-      </div>
+          <button
+            onClick={() => setTab("active")}
+            className={`px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+              tab === "active"
+                ? "bg-white text-stone-900 shadow-sm"
+                : "text-stone-500 hover:text-stone-900"
+            }`}
+          >
+            In-Transit
+            {activeOrders.length > 0 && (
+              <span className="w-2 h-2 rounded-full bg-orange-600 animate-pulse" />
+            )}
+          </button>
+          <button
+            onClick={() => setTab("history")}
+            className={`px-3 py-2 rounded-lg text-xs font-bold transition ${
+              tab === "history"
+                ? "bg-white text-stone-900 shadow-sm"
+                : "text-stone-500 hover:text-stone-900"
+            }`}
+          >
+            History
+          </button>
+        </div>
+      </header>
 
-      {/* Loading state */}
+      {/* Main Content Area */}
       {loading ? (
-        <div className="py-24 text-center">
-          <Loader2 className="animate-spin text-orange-600 mx-auto mb-2" size={32} />
-          <p className="text-xs text-stone-500 font-bold">Querying delivery queue...</p>
+        <div className="min-h-[50vh] flex items-center justify-center">
+          <Loader2 className="animate-spin text-orange-600 mb-2" size={32} />
         </div>
       ) : (
         <div className="space-y-4">
@@ -140,13 +179,13 @@ export default function DeliveryOrdersPage() {
             openOrders.length === 0 ? (
               <div className="portal-card rounded-[24px] bg-white border border-stone-200 p-12 text-center shadow-sm">
                 <Package className="w-14 h-14 text-stone-300 mx-auto mb-4" />
-                <h3 className="font-bold text-stone-850 text-lg mb-1">No pending orders</h3>
+                <h3 className="font-bold text-stone-850 text-lg mb-1">No open delivery requests</h3>
                 <p className="text-xs text-stone-500 max-w-xs mx-auto">
-                  All local kitchen orders have been dispatched. Check back in a few minutes or click the refresh button!
+                  All current customer orders have been dispatched or accepted. New food dispatch tasks will appear here in real-time.
                 </p>
               </div>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {openOrders.map((order) => (
                   <article key={order.id} className="portal-card rounded-[22px] border border-white bg-white/80 p-5 shadow-xl shadow-stone-900/5">
                     <div className="flex justify-between items-start mb-3 gap-2">
@@ -202,75 +241,138 @@ export default function DeliveryOrdersPage() {
               </div>
             ) : (
               <div className="space-y-4 max-w-xl mx-auto">
-                {activeOrders.map((order) => (
-                  <article key={order.id} className="portal-card rounded-[24px] border border-white bg-white/80 p-5 shadow-xl shadow-stone-900/5 ring-2 ring-orange-500/20">
-                    <div className="flex justify-between items-center mb-4 pb-3 border-b border-stone-100">
-                      <div>
-                        <span className="text-[10px] uppercase font-bold text-orange-600 block">Active task</span>
-                        <h3 className="font-bold text-stone-900 text-base">#FD-{order.id.slice(0, 6).toUpperCase()}</h3>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg">
-                          COD: ₹{order.total_amount}
-                        </span>
-                        <p className="text-[10px] text-stone-400 mt-1 uppercase font-bold">
-                          {order.payment_method === "cash" ? "Collect cash" : "Paid online"}
-                        </p>
-                      </div>
-                    </div>
+                {activeOrders.map((order) => {
+                  const isCOD = order.payment_method === "cash";
+                  const isCashCollected = !!cashCollectedMap[order.id];
 
-                    <div className="space-y-4 mb-6">
-                      {/* Restaurant Contact */}
-                      <div className="flex gap-3">
-                        <span className="grid h-8 w-8 place-items-center rounded-lg bg-orange-100 text-orange-600 shrink-0">
-                          <Package size={15} />
-                        </span>
+                  return (
+                    <article key={order.id} className="portal-card rounded-[24px] border border-white bg-white/80 p-5 shadow-xl shadow-stone-900/5 ring-2 ring-orange-500/20">
+                      <div className="flex justify-between items-center mb-4 pb-3 border-b border-stone-100">
                         <div>
-                          <span className="text-[10px] uppercase font-bold text-stone-400 block">1. Pickup Address (Kitchen)</span>
-                          <p className="font-bold text-stone-800 text-xs mt-0.5">{order.restaurants?.name}</p>
-                          <p className="text-xs text-stone-500">{order.restaurants?.address}</p>
-                          <a
-                            href={`tel:${order.restaurants?.phone}`}
-                            className="inline-flex items-center gap-1.5 mt-1.5 text-xs font-bold text-orange-600 hover:text-orange-700"
-                          >
-                            <Phone size={11} /> Call Restaurant
-                          </a>
+                          <span className="text-[10px] uppercase font-bold text-orange-600 block">Active Delivery</span>
+                          <h3 className="font-bold text-stone-900 text-base">#FD-{order.id.slice(0, 6).toUpperCase()}</h3>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${isCOD ? 'text-amber-800 bg-amber-100' : 'text-emerald-700 bg-emerald-50'}`}>
+                            {isCOD ? `COD: Collect ₹${order.total_amount}` : `Online Paid: ₹${order.total_amount}`}
+                          </span>
                         </div>
                       </div>
 
-                      {/* Customer Contact */}
-                      <div className="flex gap-3">
-                        <span className="grid h-8 w-8 place-items-center rounded-lg bg-orange-100 text-orange-600 shrink-0">
-                          <MapPin size={15} />
-                        </span>
-                        <div>
-                          <span className="text-[10px] uppercase font-bold text-stone-400 block">2. Delivery Address (Customer)</span>
-                          <p className="font-bold text-stone-800 text-xs mt-0.5">{order.address?.full_name}</p>
-                          <p className="text-xs text-stone-500">{order.address?.address_line1}, {order.address?.city}</p>
-                          <a
-                            href={`tel:${order.address?.phone}`}
-                            className="inline-flex items-center gap-1.5 mt-1.5 text-xs font-bold text-orange-600 hover:text-orange-700"
-                          >
-                            <Phone size={11} /> Call Customer
-                          </a>
+                      <div className="space-y-4 mb-5">
+                        {/* Restaurant Contact */}
+                        <div className="flex gap-3">
+                          <span className="grid h-8 w-8 place-items-center rounded-lg bg-orange-100 text-orange-600 shrink-0">
+                            <Package size={15} />
+                          </span>
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-stone-400 block">1. Pickup Address (Kitchen)</span>
+                            <p className="font-bold text-stone-800 text-xs mt-0.5">{order.restaurants?.name}</p>
+                            <p className="text-xs text-stone-500">{order.restaurants?.address}</p>
+                            <a
+                              href={`tel:${order.restaurants?.phone}`}
+                              className="inline-flex items-center gap-1.5 mt-1.5 text-xs font-bold text-orange-600 hover:text-orange-700"
+                            >
+                              <Phone size={11} /> Call Restaurant
+                            </a>
+                          </div>
+                        </div>
+
+                        {/* Customer Contact */}
+                        <div className="flex gap-3">
+                          <span className="grid h-8 w-8 place-items-center rounded-lg bg-orange-100 text-orange-600 shrink-0">
+                            <MapPin size={15} />
+                          </span>
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-stone-400 block">2. Delivery Address (Customer)</span>
+                            <p className="font-bold text-stone-800 text-xs mt-0.5">{order.address?.full_name}</p>
+                            <p className="text-xs text-stone-500">{order.address?.address_line1}, {order.address?.city}</p>
+                            <a
+                              href={`tel:${order.address?.phone}`}
+                              className="inline-flex items-center gap-1.5 mt-1.5 text-xs font-bold text-orange-600 hover:text-orange-700"
+                            >
+                              <Phone size={11} /> Call Customer
+                            </a>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <button
-                      onClick={() => handleComplete(order.id)}
-                      disabled={actionLoading !== null}
-                      className="w-full h-11 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition disabled:opacity-50"
-                    >
-                      {actionLoading === order.id ? (
-                        <Loader2 className="animate-spin" size={13} />
-                      ) : (
-                        <CheckCircle size={13} />
-                      )}
-                      Mark as Delivered & Settle Cash
-                    </button>
-                  </article>
-                ))}
+                      {/* ══ STEP 1: PAYMENT COLLECTION VERIFICATION BOX ══ */}
+                      <div className={`p-4 rounded-2xl mb-4 border transition ${
+                        isCOD
+                          ? isCashCollected
+                            ? "bg-emerald-50/80 border-emerald-300"
+                            : "bg-amber-50/80 border-amber-300"
+                          : "bg-blue-50/80 border-blue-200"
+                      }`}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-2.5">
+                            {isCOD ? (
+                              <Banknote className={`w-5 h-5 mt-0.5 shrink-0 ${isCashCollected ? "text-emerald-600" : "text-amber-600"}`} />
+                            ) : (
+                              <ShieldCheck className="w-5 h-5 mt-0.5 shrink-0 text-blue-600" />
+                            )}
+                            <div>
+                              <span className="text-[10px] font-extrabold uppercase tracking-wider block text-stone-500">
+                                Step 1: Payment Verification
+                              </span>
+                              <p className="text-sm font-extrabold text-stone-900 mt-0.5">
+                                {isCOD ? `Collect ₹${order.total_amount} Cash from Customer` : `Payment Pre-Paid Online (₹${order.total_amount})`}
+                              </p>
+                              <p className="text-[11px] text-stone-600 mt-0.5">
+                                {isCOD
+                                  ? "Payment is mandatory before handing over the food parcel."
+                                  : "Customer has already paid online. No cash collection needed."}
+                              </p>
+                            </div>
+                          </div>
+
+                          {isCOD && (
+                            <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-1.5 rounded-xl border border-stone-200 shadow-sm shrink-0 hover:bg-stone-50 select-none">
+                              <input
+                                type="checkbox"
+                                checked={isCashCollected}
+                                onChange={(e) => {
+                                  setCashCollectedMap((prev) => ({
+                                    ...prev,
+                                    [order.id]: e.target.checked,
+                                  }));
+                                }}
+                                className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer"
+                              />
+                              <span className="text-xs font-bold text-stone-800">
+                                {isCashCollected ? "Received ✓" : "Collect Cash"}
+                              </span>
+                            </label>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* ══ STEP 2: DELIVER & COMPLETE BUTTON ══ */}
+                      <button
+                        onClick={() => handleOpenSettlementModal(order)}
+                        disabled={actionLoading !== null}
+                        className={`w-full h-12 inline-flex items-center justify-center gap-2 rounded-xl text-xs font-bold shadow-md transition ${
+                          isCOD && !isCashCollected
+                            ? "bg-amber-600 hover:bg-amber-700 text-white"
+                            : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                        } disabled:opacity-50`}
+                      >
+                        {actionLoading === order.id ? (
+                          <Loader2 className="animate-spin" size={15} />
+                        ) : isCOD && !isCashCollected ? (
+                          <>
+                            <Banknote size={15} /> Receive Payment & Complete Delivery
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle size={15} /> Confirm & Mark as Delivered
+                          </>
+                        )}
+                      </button>
+                    </article>
+                  );
+                })}
               </div>
             )
           )}
@@ -294,7 +396,8 @@ export default function DeliveryOrdersPage() {
                         <th className="py-2.5 px-2">Order ID</th>
                         <th className="py-2.5 px-2">Kitchen</th>
                         <th className="py-2.5 px-2">Customer</th>
-                        <th className="py-2.5 px-2 text-right">Earning Payout</th>
+                        <th className="py-2.5 px-2">Payment Collected</th>
+                        <th className="py-2.5 px-2 text-right">Rider Payout</th>
                         <th className="py-2.5 px-2 text-center">Status</th>
                       </tr>
                     </thead>
@@ -304,10 +407,16 @@ export default function DeliveryOrdersPage() {
                           <td className="py-3 px-2 font-bold">#FD-{h.id.slice(0, 6).toUpperCase()}</td>
                           <td className="py-3 px-2 font-medium">{h.restaurants?.name}</td>
                           <td className="py-3 px-2 text-stone-500">{h.address?.full_name}</td>
+                          <td className="py-3 px-2 font-semibold text-stone-800">
+                            ₹{h.total_amount}{" "}
+                            <span className="text-[10px] text-stone-400 font-normal">
+                              ({h.payment_method === "cash" ? "Cash" : "Online"})
+                            </span>
+                          </td>
                           <td className="py-3 px-2 text-right font-bold text-emerald-600">₹{h.delivery_cost_share || 30}</td>
                           <td className="py-3 px-2 text-center">
                             <span className="inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-700 uppercase">
-                              Delivered
+                              Delivered ✓
                             </span>
                           </td>
                         </tr>
@@ -318,6 +427,112 @@ export default function DeliveryOrdersPage() {
               </div>
             )
           )}
+        </div>
+      )}
+
+      {/* ══ PAYMENT & DELIVERY CONFIRMATION POPUP MODAL ══ */}
+      {settlementModalOrder && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-stone-100 animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center pb-4 border-b border-stone-100">
+              <div className="flex items-center gap-2 text-stone-900 font-bold text-base">
+                <Banknote className="text-orange-600" size={20} />
+                Payment & Handover Settle
+              </div>
+              <button
+                onClick={() => setSettlementModalOrder(null)}
+                className="text-stone-400 hover:text-stone-600 p-1 rounded-lg hover:bg-stone-100"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="py-5 space-y-4">
+              {/* Order Info */}
+              <div className="p-3.5 bg-stone-50 rounded-2xl flex justify-between items-center text-xs">
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-stone-400">Order ID</span>
+                  <p className="font-bold text-stone-900">#FD-{settlementModalOrder.id.slice(0, 6).toUpperCase()}</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-bold uppercase text-stone-400">Customer</span>
+                  <p className="font-bold text-stone-900">{settlementModalOrder.address?.full_name}</p>
+                </div>
+              </div>
+
+              {/* Payment Amount Card */}
+              <div className={`p-4 rounded-2xl border ${
+                settlementModalOrder.payment_method === "cash"
+                  ? "bg-amber-50/80 border-amber-200"
+                  : "bg-emerald-50/80 border-emerald-200"
+              }`}>
+                <span className="text-[10px] font-bold uppercase text-stone-500 block">
+                  {settlementModalOrder.payment_method === "cash" ? "Cash to Collect" : "Payment Status"}
+                </span>
+                <p className="text-2xl font-black text-stone-900 mt-1">
+                  ₹{settlementModalOrder.total_amount}
+                </p>
+                <p className="text-xs text-stone-600 mt-1">
+                  {settlementModalOrder.payment_method === "cash"
+                    ? "💵 Cash on Delivery (COD) - Must collect before delivering."
+                    : "💳 Pre-paid online successfully."}
+                </p>
+              </div>
+
+              {/* Confirmation Checkbox for Cash */}
+              {settlementModalOrder.payment_method === "cash" ? (
+                <label className="flex items-start gap-3 p-3.5 bg-stone-100/80 rounded-2xl cursor-pointer hover:bg-stone-100 transition border border-stone-200">
+                  <input
+                    type="checkbox"
+                    checked={modalConfirmed}
+                    onChange={(e) => setModalConfirmed(e.target.checked)}
+                    className="w-5 h-5 mt-0.5 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer"
+                  />
+                  <div className="text-xs">
+                    <p className="font-bold text-stone-900">
+                      I have received exact ₹{settlementModalOrder.total_amount} in Cash
+                    </p>
+                    <p className="text-stone-500 text-[11px] mt-0.5">
+                      Confirming will mark order payment as PAID and settle the delivery.
+                    </p>
+                  </div>
+                </label>
+              ) : (
+                <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-2xl text-xs text-emerald-800 font-semibold border border-emerald-200">
+                  <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                  <span>Online payment of ₹{settlementModalOrder.total_amount} verified. Ready to hand over!</span>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setSettlementModalOrder(null)}
+                className="flex-1 h-11 rounded-xl border border-stone-200 text-xs font-bold text-stone-700 hover:bg-stone-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmAndComplete}
+                disabled={actionLoading !== null || (settlementModalOrder.payment_method === "cash" && !modalConfirmed)}
+                className="flex-1 h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition disabled:opacity-50 inline-flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20"
+              >
+                {actionLoading === settlementModalOrder.id ? (
+                  <Loader2 className="animate-spin" size={15} />
+                ) : (
+                  <>
+                    <CheckCircle size={15} />
+                    {settlementModalOrder.payment_method === "cash"
+                      ? "Payment Received & Done"
+                      : "Complete Delivery"}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </section>

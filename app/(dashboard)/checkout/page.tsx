@@ -232,6 +232,8 @@ export default function CheckoutPage() {
         postal_code: data.postal_code,
         country: data.country,
         address_type: data.address_type,
+        latitude: data.latitude,
+        longitude: data.longitude,
       },
       items: items.map((item) => ({
         dish_id: item.dishId,

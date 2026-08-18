@@ -17,11 +17,17 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { getUserActiveSubscriptions, updateSubscriptionStatus, type UserSubscription } from "@/lib/tiffin.user.action";
+import { pauseTiffinSubscription, resumeTiffinSubscription } from "@/lib/tiffin.action";
 
 export default function SubscriptionsDashboard() {
   const [subscriptions, setSubscriptions] = useState<UserSubscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  
+  // Datepicker states for pausing
+  const [activePauseSubId, setActivePauseSubId] = useState<string | null>(null);
+  const [pauseStart, setPauseStart] = useState("");
+  const [pauseEnd, setPauseEnd] = useState("");
 
   useEffect(() => {
     loadSubscriptions();
@@ -38,34 +44,56 @@ export default function SubscriptionsDashboard() {
     setLoading(false);
   };
 
+  const handleConfirmPause = async (subId: string) => {
+    if (!pauseStart || !pauseEnd) {
+      toast.error("Please select both start and end dates.");
+      return;
+    }
+
+    setUpdatingId(subId);
+    const res = await pauseTiffinSubscription(subId, pauseStart, pauseEnd);
+    if (res.success) {
+      toast.success("Subscription paused and delivery dates extended successfully!");
+      setActivePauseSubId(null);
+      loadSubscriptions();
+    } else {
+      toast.error(res.error || "Failed to pause subscription.");
+    }
+    setUpdatingId(null);
+  };
+
   const handleStatusChange = async (
     subId: string,
     currentStatus: string,
     action: "pause" | "resume" | "cancel"
   ) => {
-    let confirmMsg = "";
-    let targetStatus: "active" | "paused" | "cancelled" = "active";
-
     if (action === "pause") {
-      confirmMsg = "Are you sure you want to pause this subscription?";
-      targetStatus = "paused";
-    } else if (action === "resume") {
+      setPauseStart("");
+      setPauseEnd("");
+      setActivePauseSubId(subId);
+      return;
+    }
+
+    let confirmMsg = "";
+    if (action === "resume") {
       confirmMsg = "Are you sure you want to resume this subscription?";
-      targetStatus = "active";
     } else if (action === "cancel") {
       confirmMsg = "Are you sure you want to cancel this subscription? This cannot be undone.";
-      targetStatus = "cancelled";
     }
 
     if (!confirm(confirmMsg)) return;
 
     setUpdatingId(subId);
-    const res = await updateSubscriptionStatus(subId, targetStatus);
+    let res;
+    if (action === "resume") {
+      res = await resumeTiffinSubscription(subId);
+    } else {
+      res = await updateSubscriptionStatus(subId, "cancelled");
+    }
+
     if (res.success) {
       toast.success(
-        action === "pause"
-          ? "Subscription paused successfully."
-          : action === "resume"
+        action === "resume"
           ? "Subscription resumed successfully."
           : "Subscription cancelled."
       );
@@ -233,6 +261,50 @@ export default function SubscriptionsDashboard() {
                                 {item}
                               </span>
                             ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Premium Pause Date Picker Inline form */}
+                      {activePauseSubId === sub.id && (
+                        <div className="mt-5 p-4 rounded-2xl bg-amber-50/50 border border-amber-200/50 space-y-3">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Pause Interval Range</div>
+                          <div className="grid grid-cols-2 gap-3.5">
+                            <div className="flex flex-col gap-1">
+                              <span className="text-[9px] uppercase font-bold text-stone-400">Start Date</span>
+                              <input
+                                type="date"
+                                value={pauseStart}
+                                min={new Date().toISOString().split("T")[0]}
+                                onChange={(e) => setPauseStart(e.target.value)}
+                                className="px-3 py-2 rounded-xl border border-stone-200 focus:border-orange-500 outline-none text-xs font-semibold bg-white"
+                              />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <span className="text-[9px] uppercase font-bold text-stone-400">End Date</span>
+                              <input
+                                type="date"
+                                value={pauseEnd}
+                                min={pauseStart || new Date().toISOString().split("T")[0]}
+                                onChange={(e) => setPauseEnd(e.target.value)}
+                                className="px-3 py-2 rounded-xl border border-stone-200 focus:border-orange-500 outline-none text-xs font-semibold bg-white"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex justify-end gap-2 pt-1">
+                            <button
+                              onClick={() => setActivePauseSubId(null)}
+                              className="px-3 py-1.5 rounded-lg border border-stone-200 text-xs font-bold text-stone-650 hover:bg-stone-50 transition"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => handleConfirmPause(sub.id)}
+                              disabled={!pauseStart || !pauseEnd || isUpdating}
+                              className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition disabled:opacity-50"
+                            >
+                              {isUpdating && updatingId === sub.id ? "Pausing..." : "Confirm Pause"}
+                            </button>
                           </div>
                         </div>
                       )}

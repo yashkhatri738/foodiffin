@@ -13,7 +13,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { getProfile } from "@/lib/profile.action";
-import { getDeliveryPartnerHistory, getDeliveryPartnerActiveOrders } from "@/lib/delivery.action";
+import { getDeliveryPartnerHistory, getDeliveryPartnerActiveOrders, updateRiderLiveLocation } from "@/lib/delivery.action";
 
 export default function DeliveryPartnerDashboard() {
   const [profile, setProfile] = useState<any | null>(null);

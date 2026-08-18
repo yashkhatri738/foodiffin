@@ -24,6 +24,8 @@ export interface CreateOrderData {
         postal_code: string;
         country: string;
         address_type: string;
+        latitude?: number;
+        longitude?: number;
     };
     items: OrderItem[];
 }
@@ -80,9 +82,11 @@ export async function createOrder(orderData: CreateOrderData) {
             deliveryCostShare += Math.round((distanceKm - 2) * 10);
         }
 
+        const foodSubtotal = orderData.total_amount;
         const platformCommPct = 15.0; // 15% Platform cut
-        const platformCommAmount = Math.round((orderData.total_amount * platformCommPct) / 100);
-        const netPayoutAmount = orderData.total_amount - platformCommAmount - deliveryCostShare;
+        const platformCommAmount = Math.round((foodSubtotal * platformCommPct) / 100);
+        const grandTotal = foodSubtotal + deliveryCostShare;
+        const netPayoutAmount = foodSubtotal - platformCommAmount;
 
         // Create the order
         const { data: order, error: orderError } = await supabase
@@ -90,7 +94,7 @@ export async function createOrder(orderData: CreateOrderData) {
             .insert({
                 user_id: user.id,
                 restaurant_id: orderData.restaurant_id,
-                total_amount: orderData.total_amount,
+                total_amount: grandTotal, // Customer pays food subtotal + delivery fee
                 payment_method: orderData.payment_method,
                 payment_status: 'pending',
                 address: orderData.address,
@@ -147,11 +151,16 @@ export async function getUserOrders() {
       *,
       restaurants (
         id,
-        name
+        name,
+        latitude,
+        longitude
       ),
       delivery_partner:profiles!delivery_partner_id (
+        id,
         full_name,
-        phone
+        phone,
+        live_latitude,
+        live_longitude
       ),
       order_items (
         *,

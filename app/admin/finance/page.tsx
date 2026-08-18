@@ -16,14 +16,25 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { getFinancialSummary, type FinancialSummaryData, type PayoutRecord } from "@/lib/finance.action";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as ChartTooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 export default function FinancePage() {
   const [data, setData] = useState<FinancialSummaryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     loadFinanceData();
   }, []);
 
@@ -227,97 +238,56 @@ export default function FinancePage() {
         </article>
       </div>
 
-      {/* SVG Chart & Details */}
+      {/* Premium Recharts Chart & Details */}
       <div className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
-        {/* Custom SVG Chart card */}
-        <div className="portal-card rounded-[24px] border border-white bg-white/80 p-5 shadow-xl shadow-stone-900/5">
+        {/* Recharts Area Chart card */}
+        <div className="portal-card rounded-[24px] border border-white bg-white/80 p-5 shadow-xl shadow-stone-900/5 min-w-0">
           <div className="mb-6">
             <h2 className="text-base font-bold text-stone-950">Daily margin trends</h2>
-            <p className="text-xs text-stone-500">Comparison of Daily Revenue (Blue) vs Net Profit (Green)</p>
+            <p className="text-xs text-stone-500">Comparison of Daily Revenue (Orange) vs Net Profit (Green)</p>
           </div>
 
-          {dailyData.length === 0 ? (
+          {!mounted ? (
+            <div className="h-56 flex items-center justify-center text-stone-400 text-sm">
+              Loading charts...
+            </div>
+          ) : dailyData.length === 0 ? (
             <div className="h-56 flex items-center justify-center text-stone-400 text-sm">
               No sales records in the selected period.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <svg
-                viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-                className="w-full h-auto min-w-[500px]"
-              >
-                {/* Horizontal gridlines */}
-                {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-                  const y = paddingTop + (chartHeight - paddingTop - paddingBottom) * (1 - ratio);
-                  const labelVal = Math.round(yMax * ratio);
-                  return (
-                    <g key={ratio}>
-                      <line
-                        x1={paddingLeft}
-                        y1={y}
-                        x2={chartWidth - paddingRight}
-                        y2={y}
-                        stroke="#e5e5e5"
-                        strokeDasharray="4 4"
-                      />
-                      <text
-                        x={paddingLeft - 8}
-                        y={y + 4}
-                        textAnchor="end"
-                        className="text-[10px] font-bold fill-stone-400"
-                      >
-                        ₹{labelVal}
-                      </text>
-                    </g>
-                  );
-                })}
-
-                {/* Draw Columns / Paths */}
-                {dailyData.map((d, idx) => {
-                  const stepX = (chartWidth - paddingLeft - paddingRight) / Math.max(dailyData.length, 1);
-                  const x = paddingLeft + idx * stepX + stepX / 2;
-
-                  const revY = paddingTop + (chartHeight - paddingTop - paddingBottom) * (1 - d.revenue / yMax);
-                  const profitY = paddingTop + (chartHeight - paddingTop - paddingBottom) * (1 - d.profit / yMax);
-                  const bottomY = chartHeight - paddingBottom;
-
-                  return (
-                    <g key={d.date} className="group">
-                      {/* Revenue Column */}
-                      <rect
-                        x={x - 8}
-                        y={revY}
-                        width={6}
-                        height={Math.max(bottomY - revY, 0)}
-                        fill="#3b82f6"
-                        className="opacity-75 group-hover:opacity-100 transition-opacity"
-                        rx={2}
-                      />
-                      {/* Profit Column */}
-                      <rect
-                        x={x + 1}
-                        y={profitY}
-                        width={6}
-                        height={Math.max(bottomY - profitY, 0)}
-                        fill="#10b981"
-                        className="opacity-75 group-hover:opacity-100 transition-opacity"
-                        rx={2}
-                      />
-                      {/* Date Axis Label */}
-                      <text
-                        x={x}
-                        y={chartHeight - 12}
-                        textAnchor="middle"
-                        className="text-[9px] font-semibold fill-stone-400"
-                      >
-                        {d.date.slice(5)} {/* Show MM-DD */}
-                      </text>
-                      {/* Tooltip on hover */}
-                      <title>{`Date: ${d.date}\nRevenue: ₹${d.revenue}\nProfit: ₹${d.profit}`}</title>
-                    </g>
-                  );
-                })}
-              </svg>
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={dailyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ea580c" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#ea580c" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorProf" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" />
+                  <XAxis 
+                    dataKey="date" 
+                    stroke="#a3a3a3" 
+                    fontSize={10} 
+                    tickFormatter={(str) => {
+                      if (!str) return "";
+                      const parts = str.split("-");
+                      return parts.length > 2 ? `${parts[2]}/${parts[1]}` : str;
+                    }}
+                  />
+                  <YAxis stroke="#a3a3a3" fontSize={10} />
+                  <ChartTooltip 
+                    contentStyle={{ background: "#ffffff", borderRadius: "12px", border: "1px solid #e5e5e5", fontSize: "11px", fontWeight: "bold" }}
+                  />
+                  <Area type="monotone" dataKey="revenue" stroke="#ea580c" strokeWidth={2} fillOpacity={1} fill="url(#colorRev)" name="Revenue" />
+                  <Area type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorProf)" name="Net Profit" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           )}
         </div>

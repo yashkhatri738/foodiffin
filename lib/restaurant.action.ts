@@ -126,6 +126,15 @@ export async function createRestaurant(formData: {
                 };
             }
 
+            // Sync the profile table role
+            if (adminUser?.user?.id) {
+                await supabaseAdmin.from("profiles").upsert({
+                    id: adminUser.user.id,
+                    role: "restaurant_admin",
+                    full_name: formData.name + " Admin"
+                }, { onConflict: "id" });
+            }
+
             // Send credentials email
             console.log(`[Restaurant Admin] Email: ${formData.email} | Password: ${password}`);
             try {
@@ -255,6 +264,15 @@ export async function updateRestaurant(
                         success: false,
                         error: `Failed to create admin account: ${adminError.message}`,
                     };
+                }
+
+                // Sync the profile table role
+                if (newAdminUser?.user?.id) {
+                    await supabaseAdmin.from("profiles").upsert({
+                        id: newAdminUser.user.id,
+                        role: "restaurant_admin",
+                        full_name: (formData.name || currentRestaurant?.name || "") + " Admin"
+                    }, { onConflict: "id" });
                 }
 
                 // Send credentials email
