@@ -49,7 +49,7 @@ export default function KitchensClient({
   }, [restaurants, searchQuery, minRating]);
 
   return (
-    <main className="relative min-h-screen bg-stone-50 text-stone-850 py-12">
+    <main className="relative min-h-screen bg-stone-50 text-stone-850 py-12 overflow-hidden">
       {/* Background decoration */}
       <div className="pointer-events-none absolute -right-32 -top-32 h-[450px] w-[450px] rounded-full bg-orange-100/40 blur-3xl" />
       <div className="pointer-events-none absolute -left-32 top-80 h-[350px] w-[350px] rounded-full bg-amber-100/30 blur-3xl" />

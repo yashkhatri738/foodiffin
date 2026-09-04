@@ -140,13 +140,87 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
+
   html {
     @apply font-sans;
     scroll-behavior: smooth;
+    overflow-x: hidden;
+    max-width: 100vw;
+    width: 100%;
   }
+
+  body {
+    @apply bg-background text-foreground;
+    overflow-x: hidden;
+    max-width: 100vw;
+    width: 100%;
+    position: relative;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PORTAL BRANDED SCROLLBAR & ZERO HORIZONTAL OVERFLOW
+═══════════════════════════════════════════════════════════════ */
+
+/* Globally eliminate any horizontal scrollbars on all elements */
+::-webkit-scrollbar:horizontal,
+html::-webkit-scrollbar:horizontal,
+body::-webkit-scrollbar:horizontal {
+  display: none !important;
+  height: 0px !important;
+  width: 0px !important;
+  background: transparent !important;
+  opacity: 0 !important;
+}
+
+/* Vertical Scrollbar (Matches Foodiffin Theme) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 0px;
+}
+
+::-webkit-scrollbar-track {
+  background: #fdfaf6;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #f97316 0%, #ea580c 100%);
+  border-radius: 9999px;
+  border: 2px solid #fdfaf6;
+  min-height: 40px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #ea580c 0%, #c2410c 100%);
+  border: 2px solid #fdfaf6;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: #c2410c;
+}
+
+/* Modern browsers / Firefox support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #ea580c #fdfaf6;
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-track {
+  background: #1c1917;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ea580c 0%, #c2410c 100%);
+  border: 2px solid #1c1917;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #f97316;
+}
+
+.dark * {
+  scrollbar-color: #ea580c #1c1917;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -346,6 +420,7 @@
     opacity: 0;
     transform: translateY(-8px) scale(0.96);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -455,6 +530,7 @@
     opacity: 0;
     transform: translateY(-6px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -484,7 +560,8 @@
   height: 600px;
   overflow: hidden;
   background: #1c1917;
-  margin-top: -1px; /* navbar ke saath seamless connect */
+  margin-top: -1px;
+  /* navbar ke saath seamless connect */
 }
 
 @media (max-width: 768px) {
@@ -518,6 +595,7 @@
     opacity: 0;
     transform: scale(1.06);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -529,6 +607,7 @@
     opacity: 1;
     transform: scale(1);
   }
+
   to {
     opacity: 0;
     transform: scale(0.98);
@@ -539,19 +618,15 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(
-      to bottom,
+    linear-gradient(to bottom,
       rgba(28, 25, 23, 0.35) 0%,
       rgba(28, 25, 23, 0.12) 30%,
       rgba(28, 25, 23, 0.08) 60%,
-      rgba(28, 25, 23, 0.5) 100%
-    ),
-    linear-gradient(
-      to right,
+      rgba(28, 25, 23, 0.5) 100%),
+    linear-gradient(to right,
       rgba(28, 25, 23, 0.88) 0%,
       rgba(28, 25, 23, 0.6) 40%,
-      rgba(28, 25, 23, 0.15) 100%
-    );
+      rgba(28, 25, 23, 0.15) 100%);
 }
 
 .fd-hero-content {
@@ -587,6 +662,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -598,6 +674,7 @@
     opacity: 1;
     transform: translateY(0);
   }
+
   to {
     opacity: 0;
     transform: translateY(-8px);
@@ -1047,6 +1124,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -1070,6 +1148,7 @@
     opacity: 0;
     transform: scale(0.92) translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -1948,6 +2027,7 @@
 
 /* Responsive */
 @media (max-width: 640px) {
+
   .fd-profile-content,
   .fd-onboard-content {
     padding: 20px 16px 40px;
@@ -2071,13 +2151,11 @@
   position: absolute;
   inset: -35%;
   background:
-    conic-gradient(
-      from 160deg,
+    conic-gradient(from 160deg,
       transparent,
       rgba(251, 146, 60, 0.35),
       rgba(20, 184, 166, 0.28),
-      transparent
-    );
+      transparent);
   animation: portalSpin 10s linear infinite;
 }
 
@@ -2085,6 +2163,7 @@
   from {
     transform: translate3d(0, 0, 0) scale(1);
   }
+
   to {
     transform: translate3d(42px, 28px, 0) scale(1.08);
   }
@@ -2095,6 +2174,7 @@
     opacity: 0;
     transform: translateY(14px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -2108,6 +2188,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .portal-aurora,
   .portal-row,
   .portal-spotlight::before {
@@ -2138,13 +2219,11 @@
   opacity: 0.5;
   background:
     linear-gradient(120deg, rgba(255, 255, 255, 0.8), transparent 36%),
-    repeating-linear-gradient(
-      90deg,
+    repeating-linear-gradient(90deg,
       rgba(120, 53, 15, 0.06) 0,
       rgba(120, 53, 15, 0.06) 1px,
       transparent 1px,
-      transparent 56px
-    );
+      transparent 56px);
   mask-image: linear-gradient(to bottom, #000, transparent 84%);
 }
 
@@ -2234,6 +2313,7 @@
   from {
     transform: translate3d(0, 0, 0) scale(1);
   }
+
   to {
     transform: translate3d(-34px, 26px, 0) scale(1.07);
   }
@@ -2373,6 +2453,7 @@
   from {
     transform: translate3d(0, 0, 0) scale(1);
   }
+
   to {
     transform: translate3d(36px, 24px, 0) scale(1.07);
   }
@@ -2383,6 +2464,7 @@
     opacity: 0;
     transform: translateY(16px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -2393,6 +2475,7 @@
   from {
     transform: translateY(0) rotate(0deg);
   }
+
   to {
     transform: translateY(-10px) rotate(0.6deg);
   }
@@ -2402,6 +2485,7 @@
   from {
     transform: translateY(0);
   }
+
   to {
     transform: translateY(12px);
   }
@@ -2414,6 +2498,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .home-glow,
   .home-card,
   .home-hero-frame,

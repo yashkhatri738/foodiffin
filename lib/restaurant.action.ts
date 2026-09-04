@@ -73,6 +73,7 @@ export async function createRestaurant(formData: {
     closing_time?: string;
     latitude?: number;
     longitude?: number;
+    images?: string[];
 }): Promise<ActionResult> {
     try {
         const supabase = await createClient();
@@ -99,52 +100,106 @@ export async function createRestaurant(formData: {
             return { success: false, error: error.message };
         }
 
-        // Only create admin account if email is provided
+        const restaurantId = (data as any).id;
+
+        // Ensure the owner user has restaurant_id in their metadata
+        try {
+            await supabaseAdmin.auth.admin.updateUserById(user.id, {
+                user_metadata: {
+                    ...user.user_metadata,
+                    restaurant_id: restaurantId,
+                },
+            });
+        } catch {
+            // Non-fatal if metadata update fails
+        }
+
+        // Only create or link admin account if email is provided
         if (formData.email && formData.email.trim() !== "") {
-            const password = generatePassword();
-            const { data: adminUser, error: adminError } =
-                await supabaseAdmin.auth.admin.createUser({
-                    email: formData.email,
-                    password,
-                    email_confirm: true,
+            const isCurrentOwner = formData.email.toLowerCase().trim() === user.email?.toLowerCase().trim();
+
+            if (isCurrentOwner) {
+                await supabaseAdmin.auth.admin.updateUserById(user.id, {
                     user_metadata: {
+                        ...user.user_metadata,
                         role: "restaurant_admin",
-                        restaurant_id: (data as any).id,
+                        restaurant_id: restaurantId,
                         restaurant_name: formData.name,
                     },
                 });
-
-            if (adminError) {
-                // Roll back restaurant row so state stays consistent
-                await supabaseAdmin
-                    .from("restaurants")
-                    .delete()
-                    .eq("id", (data as any).id);
-                return {
-                    success: false,
-                    error: `Failed to create admin account: ${adminError.message}`,
-                };
-            }
-
-            // Sync the profile table role
-            if (adminUser?.user?.id) {
                 await supabaseAdmin.from("profiles").upsert({
-                    id: adminUser.user.id,
+                    id: user.id,
                     role: "restaurant_admin",
                     full_name: formData.name + " Admin"
                 }, { onConflict: "id" });
-            }
+            } else {
+                // Check if user already exists in Auth
+                const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
+                const existingUser = userList?.users?.find(
+                    (u: any) => u.email?.toLowerCase() === formData.email?.toLowerCase().trim()
+                );
 
-            // Send credentials email
-            console.log(`[Restaurant Admin] Email: ${formData.email} | Password: ${password}`);
-            try {
-                await sendRestaurantCredentials({
-                    restaurantName: formData.name,
-                    email: formData.email,
-                    password,
-                });
-            } catch {
-                // Email failure is non-fatal
+                if (existingUser) {
+                    await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
+                        user_metadata: {
+                            ...existingUser.user_metadata,
+                            role: "restaurant_admin",
+                            restaurant_id: restaurantId,
+                            restaurant_name: formData.name,
+                        },
+                    });
+                    await supabaseAdmin.from("profiles").upsert({
+                        id: existingUser.id,
+                        role: "restaurant_admin",
+                        full_name: formData.name + " Admin"
+                    }, { onConflict: "id" });
+                } else {
+                    const password = generatePassword();
+                    const { data: adminUser, error: adminError } =
+                        await supabaseAdmin.auth.admin.createUser({
+                            email: formData.email,
+                            password,
+                            email_confirm: true,
+                            user_metadata: {
+                                role: "restaurant_admin",
+                                restaurant_id: restaurantId,
+                                restaurant_name: formData.name,
+                            },
+                        });
+
+                    if (adminError) {
+                        // Roll back restaurant row so state stays consistent
+                        await supabaseAdmin
+                            .from("restaurants")
+                            .delete()
+                            .eq("id", restaurantId);
+                        return {
+                            success: false,
+                            error: `Failed to create admin account: ${adminError.message}`,
+                        };
+                    }
+
+                    // Sync the profile table role
+                    if (adminUser?.user?.id) {
+                        await supabaseAdmin.from("profiles").upsert({
+                            id: adminUser.user.id,
+                            role: "restaurant_admin",
+                            full_name: formData.name + " Admin"
+                        }, { onConflict: "id" });
+                    }
+
+                    // Send credentials email
+                    console.log(`[Restaurant Admin] Email: ${formData.email} | Password: ${password}`);
+                    try {
+                        await sendRestaurantCredentials({
+                            restaurantName: formData.name,
+                            email: formData.email,
+                            password,
+                        });
+                    } catch {
+                        // Email failure is non-fatal
+                    }
+                }
             }
         }
 

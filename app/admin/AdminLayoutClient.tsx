@@ -10,12 +10,12 @@ import {
   Menu,
   PackageCheck,
   Settings,
-  User,
   Utensils,
   X,
   Calendar,
   ArrowLeftRight,
   DollarSign,
+  Store,
 } from "lucide-react";
 
 const navItems = [
@@ -25,7 +25,7 @@ const navItems = [
   { label: "Orders", href: "/admin/orders", icon: PackageCheck },
   { label: "Finance", href: "/admin/finance", icon: DollarSign },
   { label: "Settings", href: "/admin/settings", icon: Settings },
-  { label: "Profile", href: "/admin/profile", icon: User },
+  { label: "Restaurant Profile", href: "/admin/profile", icon: Store },
 ];
 
 export default function AdminLayoutClient({
@@ -79,10 +79,10 @@ export default function AdminLayoutClient({
             })}
           </nav>
 
-          <div className="mt-auto flex flex-col gap-3">
+          <div className="mt-auto pt-3 border-t border-stone-200/60">
             <Link
-              href="/"
-              className="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-sm font-bold text-orange-600 transition hover:bg-orange-55 shadow-sm hover:shadow"
+              href="/profile"
+              className="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-sm font-bold text-orange-600 transition hover:bg-orange-50 shadow-sm"
             >
               <ArrowLeftRight size={17} />
               Switch to User Mode
@@ -136,7 +136,7 @@ export default function AdminLayoutClient({
               })}
               <hr className="my-2 border-stone-200" />
               <Link
-                href="/"
+                href="/profile"
                 onClick={() => setMobileOpen(false)}
                 className="flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-bold text-orange-600 hover:bg-white/80"
               >

@@ -35,10 +35,7 @@ import {
 import {
   getRestaurantById,
   createRestaurant,
-  updateRestaurant,
   uploadRestaurantImage,
-  addImageToRestaurant,
-  removeImageFromRestaurant,
 } from "@/lib/restaurant.action";
 
 // Step definitions
@@ -114,9 +111,7 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [restaurantId, setRestaurantId] = useState<string | null>(null);
   const [images, setImages] = useState<string[]>([]);
-  const [isEdit, setIsEdit] = useState(false);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [coords, setCoords] = useState<{ latitude?: number; longitude?: number }>({});
 
@@ -200,7 +195,112 @@ export default function OnboardingPage() {
     }));
   };
 
-  const saveStep = async () => {
+  const nextStep = async () => {
+    // Validate current step
+    if (currentStep === 1) {
+      const valid = await trigger(["name", "description"]);
+      if (!valid) {
+        toast.error("Please fill in all required basic details");
+        return;
+      }
+      if (selectedCuisines.length === 0) {
+        toast.error("Please select at least one cuisine type");
+        return;
+      }
+    } else if (currentStep === 2) {
+      const valid = await trigger(["address", "city", "state", "pincode", "country"]);
+      if (!valid) {
+        toast.error("Please fill in all location details");
+        return;
+      }
+    } else if (currentStep === 3) {
+      const valid = await trigger(["phone", "email"]);
+      if (!valid) {
+        toast.error("Please fill in all contact details");
+        return;
+      }
+      // Simple email validation pattern check
+      const emailVal = getValues("email");
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(emailVal)) {
+        toast.error("Please enter a valid email address");
+        return;
+      }
+    }
+
+    if (!completedSteps.includes(currentStep)) {
+      setCompletedSteps((prev) => [...prev, currentStep]);
+    }
+    if (currentStep < STEPS.length) {
+      setCurrentStep((s) => s + 1);
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) setCurrentStep((s) => s - 1);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be less than 5MB");
+      return;
+    }
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const uploadRes = await uploadRestaurantImage(formData);
+    if (uploadRes.success && uploadRes.data) {
+      setImages((prev) => [...prev, uploadRes.data!]);
+      if (!completedSteps.includes(6)) {
+        setCompletedSteps((prev) => [...prev, 6]);
+      }
+      toast.success("Image uploaded!");
+    } else {
+      toast.error(uploadRes.error || "Upload failed");
+    }
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleRemoveImage = (imageUrl: string) => {
+    setImages((prev) => prev.filter((img) => img !== imageUrl));
+    toast.success("Image removed");
+  };
+
+  const finishOnboarding = async () => {
+    // Validate required steps just in case
+    const validBasic = await trigger(["name", "description"]);
+    if (!validBasic || selectedCuisines.length === 0) {
+      toast.error("Please complete basic details in Step 1");
+      setCurrentStep(1);
+      return;
+    }
+
+    const validLoc = await trigger(["address", "city", "state", "pincode", "country"]);
+    if (!validLoc) {
+      toast.error("Please complete location details in Step 2");
+      setCurrentStep(2);
+      return;
+    }
+
+    const validContact = await trigger(["phone", "email"]);
+    const emailVal = getValues("email");
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!validContact || !emailRegex.test(emailVal)) {
+      toast.error("Please complete contact details with a valid email in Step 3");
+      setCurrentStep(3);
+      return;
+    }
+
     setSaving(true);
     const data = getValues();
 
@@ -234,130 +334,25 @@ export default function OnboardingPage() {
       closing_time: closingTime,
       latitude: coords.latitude || 19.076,
       longitude: coords.longitude || 72.877,
+      images: images,
     };
 
     try {
-      if (isEdit && restaurantId) {
-        const result = await updateRestaurant(restaurantId, restaurantData);
-        if (result.success) {
-          toast.success("Progress saved!");
-          if (!completedSteps.includes(currentStep)) {
-            setCompletedSteps((prev) => [...prev, currentStep]);
-          }
-        } else {
-          toast.error(result.error || "Failed to save");
+      const result = await createRestaurant(restaurantData);
+      if (result.success && result.data) {
+        if (!completedSteps.includes(6)) {
+          setCompletedSteps((prev) => [...prev, 6]);
         }
+        toast.success("Restaurant created!");
+        router.push("/admin/dashboard");
       } else {
-        const result = await createRestaurant(restaurantData);
-        if (result.success && result.data) {
-          const newId = (result.data as RestaurantData).id;
-          if (newId) {
-            setRestaurantId(newId);
-            setIsEdit(true);
-            setCompletedSteps([1]);
-            toast.success("Restaurant created!");
-          }
-        } else {
-          toast.error(result.error || "Failed to create");
-        }
+        toast.error(result.error || "Failed to create restaurant");
       }
     } catch {
       toast.error("Something went wrong");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-  };
-
-  const nextStep = async () => {
-    // Validate current step
-    let valid = true;
-    if (currentStep === 1) {
-      valid = await trigger(["name", "description"]);
-      if (!valid) {
-        toast.error("Please fill in all required basic details");
-        return;
-      }
-      if (selectedCuisines.length === 0) {
-        toast.error("Please select at least one cuisine type");
-        return;
-      }
-    } else if (currentStep === 2) {
-      valid = await trigger(["address", "city", "state", "pincode", "country"]);
-      if (!valid) {
-        toast.error("Please fill in all location details");
-        return;
-      }
-    } else if (currentStep === 3) {
-      valid = await trigger(["phone", "email"]);
-      if (!valid) {
-        toast.error("Please fill in all contact details");
-        return;
-      }
-      // Simple email validation pattern check
-      const emailVal = getValues("email");
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(emailVal)) {
-        toast.error("Please enter a valid email address");
-        return;
-      }
-    }
-    await saveStep();
-    if (currentStep < STEPS.length) setCurrentStep((s) => s + 1);
-  };
-
-  const prevStep = () => {
-    if (currentStep > 1) setCurrentStep((s) => s - 1);
-  };
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !restaurantId) return;
-
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please upload an image file");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image must be less than 5MB");
-      return;
-    }
-
-    setUploading(true);
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const uploadRes = await uploadRestaurantImage(formData);
-    if (uploadRes.success && uploadRes.data) {
-      const addRes = await addImageToRestaurant(restaurantId, uploadRes.data);
-      if (addRes.success) {
-        setImages((prev) => [...prev, uploadRes.data!]);
-        if (!completedSteps.includes(6))
-          setCompletedSteps((prev) => [...prev, 6]);
-        toast.success("Image uploaded!");
-      } else {
-        toast.error("Failed to link image");
-      }
-    } else {
-      toast.error(uploadRes.error || "Upload failed");
-    }
-    setUploading(false);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const handleRemoveImage = async (imageUrl: string) => {
-    if (!restaurantId) return;
-    const res = await removeImageFromRestaurant(restaurantId, imageUrl);
-    if (res.success) {
-      setImages((prev) => prev.filter((img) => img !== imageUrl));
-      toast.success("Image removed");
-    } else {
-      toast.error("Failed to remove image");
-    }
-  };
-
-  const finishOnboarding = async () => {
-    await saveStep();
-    toast.success("Restaurant setup complete!");
-    router.push("/admin/dashboard");
   };
 
   if (loading) {
@@ -392,12 +387,10 @@ export default function OnboardingPage() {
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-white">
-                {isEdit ? "Edit Restaurant" : "Launch Your Kitchen"}
+                Launch Your Kitchen
               </h1>
               <p className="text-white/80 text-sm">
-                {isEdit
-                  ? "Update your restaurant details"
-                  : "Set up your restaurant in a few simple steps"}
+                Set up your restaurant in a few simple steps
               </p>
             </div>
           </div>
@@ -415,9 +408,9 @@ export default function OnboardingPage() {
                 <button
                   key={step.id}
                   onClick={() =>
-                    (isEdit || isCompleted) && setCurrentStep(step.id)
+                    (isCompleted || step.id <= currentStep) && setCurrentStep(step.id)
                   }
-                  disabled={!isEdit && !isCompleted && step.id !== currentStep}
+                  disabled={!isCompleted && step.id > currentStep}
                   className={`flex-1 min-w-[100px] flex flex-col items-center gap-2 p-3 rounded-xl transition ${
                     isActive
                       ? "bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/25"
@@ -956,82 +949,68 @@ export default function OnboardingPage() {
                 </div>
               </div>
 
-              {!restaurantId ? (
-                <div className="text-center py-12 border-2 border-dashed border-stone-200 rounded-2xl">
-                  <ImagePlus
-                    size={48}
-                    className="mx-auto text-stone-300 mb-4"
-                  />
-                  <p className="text-stone-500">
-                    Please complete previous steps first to upload images
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-stone-300 hover:border-orange-400 rounded-2xl p-8 text-center cursor-pointer transition group"
-                  >
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-stone-300 hover:border-orange-400 rounded-2xl p-8 text-center cursor-pointer transition group"
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                {uploading ? (
+                  <div className="flex flex-col items-center">
+                    <Loader2
+                      size={40}
+                      className="animate-spin text-orange-500 mb-3"
                     />
-                    {uploading ? (
-                      <div className="flex flex-col items-center">
-                        <Loader2
-                          size={40}
-                          className="animate-spin text-orange-500 mb-3"
-                        />
-                        <p className="text-stone-600">Uploading...</p>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center">
-                        <div className="w-16 h-16 rounded-2xl bg-stone-100 group-hover:bg-orange-100 flex items-center justify-center mb-4 transition">
-                          <Upload
-                            size={28}
-                            className="text-stone-400 group-hover:text-orange-500 transition"
-                          />
-                        </div>
-                        <p className="font-semibold text-stone-900 mb-1">
-                          Click to upload images
-                        </p>
-                        <p className="text-sm text-stone-500">
-                          PNG, JPG up to 5MB
-                        </p>
-                      </div>
-                    )}
+                    <p className="text-stone-600">Uploading...</p>
                   </div>
-
-                  {images.length > 0 && (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-6">
-                      {images.map((img, idx) => (
-                        <div
-                          key={idx}
-                          className="relative aspect-square rounded-xl overflow-hidden group"
-                        >
-                          <Image
-                            src={img}
-                            alt={`Image ${idx + 1}`}
-                            fill
-                            className="object-cover"
-                            sizes="200px"
-                          />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                            <button
-                              onClick={() => handleRemoveImage(img)}
-                              className="p-2 bg-white rounded-xl text-red-500 hover:bg-red-50 transition"
-                            >
-                              <X size={20} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <div className="w-16 h-16 rounded-2xl bg-stone-100 group-hover:bg-orange-100 flex items-center justify-center mb-4 transition">
+                      <Upload
+                        size={28}
+                        className="text-stone-400 group-hover:text-orange-500 transition"
+                      />
                     </div>
-                  )}
-                </>
+                    <p className="font-semibold text-stone-900 mb-1">
+                      Click to upload images
+                    </p>
+                    <p className="text-sm text-stone-500">
+                      PNG, JPG up to 5MB
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {images.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-6">
+                  {images.map((img, idx) => (
+                    <div
+                      key={idx}
+                      className="relative aspect-square rounded-xl overflow-hidden group"
+                    >
+                      <Image
+                        src={img}
+                        alt={`Image ${idx + 1}`}
+                        fill
+                        className="object-cover"
+                        sizes="200px"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                        <button
+                          onClick={() => handleRemoveImage(img)}
+                          className="p-2 bg-white rounded-xl text-red-500 hover:bg-red-50 transition"
+                        >
+                          <X size={20} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           )}
